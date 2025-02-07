@@ -63,6 +63,9 @@ Default commit types and their aliases:
    - Change emojis
    - Modify colors
    - Toggle prefix removal
+  
+  ![2025-02-07_09-18-39](https://github.com/user-attachments/assets/a580845e-88ff-40e0-922e-da8247720eed)
+
 
 ## Development
 
