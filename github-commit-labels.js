@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.0.0
+// @version      1.0.1
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -600,7 +600,7 @@ SOFTWARE.
     }
 
     // Only set up observers if we're on a commit page
-    if (isCommitPage()) {
+    function initialize() {
         // Initial run
         addCommitLabels();
 
@@ -616,4 +616,40 @@ SOFTWARE.
         // Start observing the document with the configured parameters
         observer.observe(document.body, { childList: true, subtree: true });
     }
+
+    // Initialize on page load
+    initialize();
+
+    // Handle GitHub's client-side navigation
+    const navigationObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                // Check if we're on a commit page after navigation
+                if (isCommitPage()) {
+                    // Small delay to ensure GitHub has finished rendering
+                    setTimeout(addCommitLabels, 100);
+                }
+            }
+        }
+    });
+
+    // Observe changes to the main content area
+    navigationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Listen for popstate events (browser back/forward navigation)
+    window.addEventListener('popstate', () => {
+        if (isCommitPage()) {
+            setTimeout(addCommitLabels, 100);
+        }
+    });
+
+    // Listen for GitHub's custom navigation event
+    document.addEventListener('turbo:render', () => {
+        if (isCommitPage()) {
+            setTimeout(addCommitLabels, 100);
+        }
+    });
 })();
