@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.0.1
+// @version      1.1.0
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -42,23 +42,67 @@ SOFTWARE.
 (function() {
     'use strict';
 
-    // Color definitions using HSL values
-    const COLORS = {
-        'green': { bg: 'rgba(35, 134, 54, 0.2)', text: '#7ee787' },
-        'purple': { bg: 'rgba(163, 113, 247, 0.2)', text: '#d2a8ff' },
-        'blue': { bg: 'rgba(47, 129, 247, 0.2)', text: '#79c0ff' },
-        'light-blue': { bg: 'rgba(31, 111, 235, 0.2)', text: '#58a6ff' },
-        'yellow': { bg: 'rgba(210, 153, 34, 0.2)', text: '#e3b341' },
-        'orange': { bg: 'rgba(219, 109, 40, 0.2)', text: '#ffa657' },
-        'gray': { bg: 'rgba(139, 148, 158, 0.2)', text: '#8b949e' },
-        'light-green': { bg: 'rgba(57, 211, 83, 0.2)', text: '#56d364' },
-        'red': { bg: 'rgba(248, 81, 73, 0.2)', text: '#ff7b72' },
-        'dark-yellow': { bg: 'rgba(187, 128, 9, 0.2)', text: '#bb8009' }
+    // Detect GitHub theme (dark, light, or dark dimmed)
+    function detectTheme() {
+        const html = document.documentElement;
+        if (html.getAttribute('data-color-mode') === 'dark') {
+            const darkTheme = html.getAttribute('data-dark-theme');
+            return darkTheme === 'dark_dimmed' ? 'dark_dimmed' : 'dark';
+        }
+        return 'light';
+    }
+
+    // Get current theme
+    let currentTheme = detectTheme();
+    
+    // Color definitions based on theme
+    const THEME_COLORS = {
+        light: {
+            'green': { bg: 'rgba(35, 134, 54, 0.1)', text: '#1a7f37' },
+            'purple': { bg: 'rgba(163, 113, 247, 0.1)', text: '#8250df' },
+            'blue': { bg: 'rgba(47, 129, 247, 0.1)', text: '#0969da' },
+            'light-blue': { bg: 'rgba(31, 111, 235, 0.1)', text: '#0550ae' },
+            'yellow': { bg: 'rgba(210, 153, 34, 0.1)', text: '#9e6a03' },
+            'orange': { bg: 'rgba(219, 109, 40, 0.1)', text: '#bc4c00' },
+            'gray': { bg: 'rgba(139, 148, 158, 0.1)', text: '#57606a' },
+            'light-green': { bg: 'rgba(57, 211, 83, 0.1)', text: '#1a7f37' },
+            'red': { bg: 'rgba(248, 81, 73, 0.1)', text: '#cf222e' },
+            'dark-yellow': { bg: 'rgba(187, 128, 9, 0.1)', text: '#9e6a03' }
+        },
+        dark: {
+            'green': { bg: 'rgba(35, 134, 54, 0.2)', text: '#7ee787' },
+            'purple': { bg: 'rgba(163, 113, 247, 0.2)', text: '#d2a8ff' },
+            'blue': { bg: 'rgba(47, 129, 247, 0.2)', text: '#79c0ff' },
+            'light-blue': { bg: 'rgba(31, 111, 235, 0.2)', text: '#58a6ff' },
+            'yellow': { bg: 'rgba(210, 153, 34, 0.2)', text: '#e3b341' },
+            'orange': { bg: 'rgba(219, 109, 40, 0.2)', text: '#ffa657' },
+            'gray': { bg: 'rgba(139, 148, 158, 0.2)', text: '#8b949e' },
+            'light-green': { bg: 'rgba(57, 211, 83, 0.2)', text: '#56d364' },
+            'red': { bg: 'rgba(248, 81, 73, 0.2)', text: '#ff7b72' },
+            'dark-yellow': { bg: 'rgba(187, 128, 9, 0.2)', text: '#bb8009' }
+        },
+        dark_dimmed: {
+            'green': { bg: 'rgba(35, 134, 54, 0.15)', text: '#6bc46d' },
+            'purple': { bg: 'rgba(163, 113, 247, 0.15)', text: '#c297ff' },
+            'blue': { bg: 'rgba(47, 129, 247, 0.15)', text: '#6cb6ff' },
+            'light-blue': { bg: 'rgba(31, 111, 235, 0.15)', text: '#539bf5' },
+            'yellow': { bg: 'rgba(210, 153, 34, 0.15)', text: '#daaa3f' },
+            'orange': { bg: 'rgba(219, 109, 40, 0.15)', text: '#f0883e' },
+            'gray': { bg: 'rgba(139, 148, 158, 0.15)', text: '#909dab' },
+            'light-green': { bg: 'rgba(57, 211, 83, 0.15)', text: '#6bc46d' },
+            'red': { bg: 'rgba(248, 81, 73, 0.15)', text: '#e5534b' },
+            'dark-yellow': { bg: 'rgba(187, 128, 9, 0.15)', text: '#daaa3f' }
+        }
     };
+
+    // Get colors for current theme
+    let COLORS = THEME_COLORS[currentTheme];
 
     // Define default configuration
     const DEFAULT_CONFIG = {
         removePrefix: true,
+        enableTooltips: true,
+        labelsVisible: true,
         labelStyle: {
             fontSize: '14px',
             fontWeight: '500',
@@ -79,67 +123,156 @@ SOFTWARE.
         },
         commitTypes: {
             // Features
-            feat: { emoji: '✨', label: 'Feature', color: 'green' },
-            feature: { emoji: '✨', label: 'Feature', color: 'green' },
+            feat: { emoji: '✨', label: 'Feature', color: 'green', description: 'New user features (not for new files without user features)' },
+            feature: { emoji: '✨', label: 'Feature', color: 'green', description: 'New user features (not for new files without user features)' },
 
             // Added
-            added: { emoji: '📝', label: 'Added', color: 'green' },
-            add: { emoji: '📝', label: 'Added', color: 'green' },
+            added: { emoji: '📝', label: 'Added', color: 'green', description: 'New files/resources with no user-facing features' },
+            add: { emoji: '📝', label: 'Added', color: 'green', description: 'New files/resources with no user-facing features' },
 
             // Updated
-            update: { emoji: '♻️', label: 'Updated', color: 'blue' },
-            updated: { emoji: '♻️', label: 'Updated', color: 'blue' },
+            update: { emoji: '♻️', label: 'Updated', color: 'blue', description: 'Changes to existing functionality' },
+            updated: { emoji: '♻️', label: 'Updated', color: 'blue', description: 'Changes to existing functionality' },
 
             // Removed
-            removed: { emoji: '🗑️', label: 'Removed', color: 'red' },
-            remove: { emoji: '🗑️', label: 'Removed', color: 'red' },
+            removed: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
+            remove: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
 
             // Fixes
-            fix: { emoji: '🐛', label: 'Fix', color: 'purple' },
-            bugfix: { emoji: '🐛', label: 'Fix', color: 'purple' },
-            fixed: { emoji: '🐛', label: 'Fix', color: 'purple' },
-            hotfix: { emoji: '🚨', label: 'Hot Fix', color: 'red' },
+            fix: { emoji: '🐛', label: 'Fix', color: 'purple', description: 'Bug fixes/corrections to errors' },
+            bugfix: { emoji: '🐛', label: 'Fix', color: 'purple', description: 'Bug fixes/corrections to errors' },
+            fixed: { emoji: '🐛', label: 'Fix', color: 'purple', description: 'Bug fixes/corrections to errors' },
+            hotfix: { emoji: '🚨', label: 'Hot Fix', color: 'red', description: 'Critical bug fixes requiring immediate attention' },
 
             // Documentation
-            docs: { emoji: '📚', label: 'Docs', color: 'blue' },
-            doc: { emoji: '📚', label: 'Docs', color: 'blue' },
-            documentation: { emoji: '📚', label: 'Docs', color: 'blue' },
+            docs: { emoji: '📚', label: 'Docs', color: 'blue', description: 'Documentation only changes' },
+            doc: { emoji: '📚', label: 'Docs', color: 'blue', description: 'Documentation only changes' },
+            documentation: { emoji: '📚', label: 'Docs', color: 'blue', description: 'Documentation only changes' },
 
             // Styling
-            style: { emoji: '💎', label: 'Style', color: 'light-green' },
-            ui: { emoji: '🎨', label: 'UI', color: 'light-green' },
-            css: { emoji: '💎', label: 'Style', color: 'light-green' },
+            style: { emoji: '💎', label: 'Style', color: 'light-green', description: 'Formatting/whitespace changes (no code change)' },
+            ui: { emoji: '🎨', label: 'UI', color: 'light-green', description: 'User interface changes' },
+            css: { emoji: '💎', label: 'Style', color: 'light-green', description: 'CSS/styling changes' },
 
             // Code Changes
-            refactor: { emoji: '📦', label: 'Refactor', color: 'light-blue' },
-            perf: { emoji: '🚀', label: 'Performance', color: 'purple' },
-            performance: { emoji: '🚀', label: 'Performance', color: 'purple' },
-            optimize: { emoji: '⚡', label: 'Optimize', color: 'purple' },
+            refactor: { emoji: '📦', label: 'Refactor', color: 'light-blue', description: 'Restructured code (no behavior change)' },
+            perf: { emoji: '🚀', label: 'Performance', color: 'purple', description: 'Performance improvements' },
+            performance: { emoji: '🚀', label: 'Performance', color: 'purple', description: 'Performance improvements' },
+            optimize: { emoji: '⚡', label: 'Optimize', color: 'purple', description: 'Code optimization without functional changes' },
 
             // Testing
-            test: { emoji: '🧪', label: 'Test', color: 'yellow' },
-            tests: { emoji: '🧪', label: 'Test', color: 'yellow' },
-            testing: { emoji: '🧪', label: 'Test', color: 'yellow' },
+            test: { emoji: '🧪', label: 'Test', color: 'yellow', description: 'Test-related changes' },
+            tests: { emoji: '🧪', label: 'Test', color: 'yellow', description: 'Test-related changes' },
+            testing: { emoji: '🧪', label: 'Test', color: 'yellow', description: 'Test-related changes' },
 
             // Build & Deploy
-            build: { emoji: '🛠', label: 'Build', color: 'orange' },
-            ci: { emoji: '⚙️', label: 'CI', color: 'gray' },
-            cd: { emoji: '🚀', label: 'CD', color: 'gray' },
-            deploy: { emoji: '📦', label: 'Deploy', color: 'orange' },
-            release: { emoji: '🚀', label: 'Deploy', color: 'orange' },
+            build: { emoji: '🛠', label: 'Build', color: 'orange', description: 'Build system changes' },
+            ci: { emoji: '⚙️', label: 'CI', color: 'gray', description: 'CI pipeline changes' },
+            cd: { emoji: '🚀', label: 'CD', color: 'gray', description: 'Continuous deployment changes' },
+            deploy: { emoji: '📦', label: 'Deploy', color: 'orange', description: 'Deployment related changes' },
+            release: { emoji: '🚀', label: 'Deploy', color: 'orange', description: 'Production releases' },
 
             // Maintenance
-            chore: { emoji: '♻️', label: 'Chore', color: 'light-green' },
-            deps: { emoji: '📦', label: 'Dependencies', color: 'light-green' },
-            dep: { emoji: '📦', label: 'Dependencies', color: 'light-green' },
-            dependencies: { emoji: '📦', label: 'Dependencies', color: 'light-green' },
-            revert: { emoji: '🗑', label: 'Revert', color: 'red' },
-            wip: { emoji: '🚧', label: 'WIP', color: 'dark-yellow' }
+            chore: { emoji: '♻️', label: 'Chore', color: 'light-green', description: 'Routine maintenance tasks' },
+            deps: { emoji: '📦', label: 'Dependencies', color: 'light-green', description: 'Dependency updates or changes' },
+            dep: { emoji: '📦', label: 'Dependencies', color: 'light-green', description: 'Dependency updates or changes' },
+            dependencies: { emoji: '📦', label: 'Dependencies', color: 'light-green', description: 'Dependency updates or changes' },
+            revert: { emoji: '🗑', label: 'Revert', color: 'red', description: 'Reverting previous changes' },
+            wip: { emoji: '🚧', label: 'WIP', color: 'dark-yellow', description: 'Work in progress' },
+
+            // Security
+            security: { emoji: '🔒', label: 'Security', color: 'red', description: 'Security-related changes' },
+            
+            // Internationalization
+            i18n: { emoji: '🌐', label: 'i18n', color: 'blue', description: 'Internationalization and localization' },
+            
+            // Accessibility
+            a11y: { emoji: '♿', label: 'Accessibility', color: 'purple', description: 'Accessibility improvements' },
+            
+            // API changes
+            api: { emoji: '🔌', label: 'API', color: 'light-blue', description: 'API-related changes' },
+            
+            // Database changes
+            data: { emoji: '🗃️', label: 'Database', color: 'orange', description: 'Database schema or data changes' },
+            
+            // Configuration changes
+            config: { emoji: '⚙️', label: 'Config', color: 'gray', description: 'Configuration changes' },
+            
+            // Initial setup
+            init: { emoji: '🎬', label: 'Init', color: 'green', description: 'Initial commit/project setup' }
         }
     };
 
     // Get saved configuration or use default
     const USER_CONFIG = GM_getValue('commitLabelsConfig', DEFAULT_CONFIG);
+    
+    // Ensure labelsVisible exists in config (for backward compatibility)
+    if (USER_CONFIG.labelsVisible === undefined) {
+        USER_CONFIG.labelsVisible = true;
+        GM_setValue('commitLabelsConfig', USER_CONFIG);
+    }
+
+    // Create floating toggle button for labels
+    function createLabelToggle() {
+        // Only create if we're on a commit page
+        if (!isCommitPage()) return;
+        
+        // Check if toggle already exists
+        if (document.getElementById('commit-labels-toggle')) return;
+        
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'commit-labels-toggle';
+        toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+        toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
+        toggleBtn.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #238636;
+            color: #ffffff;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            opacity: 0.8;
+            transition: opacity 0.2s, transform 0.2s;
+        `;
+        
+        // Add hover effect
+        toggleBtn.addEventListener('mouseenter', () => {
+            toggleBtn.style.opacity = '1';
+            toggleBtn.style.transform = 'scale(1.1)';
+        });
+        
+        toggleBtn.addEventListener('mouseleave', () => {
+            toggleBtn.style.opacity = '0.8';
+            toggleBtn.style.transform = 'scale(1)';
+        });
+        
+        // Toggle labels on click
+        toggleBtn.addEventListener('click', () => {
+            USER_CONFIG.labelsVisible = !USER_CONFIG.labelsVisible;
+            GM_setValue('commitLabelsConfig', USER_CONFIG);
+            
+            // Update button
+            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+            toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
+            
+            // Toggle label visibility
+            document.querySelectorAll('.commit-label').forEach(label => {
+                label.style.display = USER_CONFIG.labelsVisible ? 'inline-flex' : 'none';
+            });
+        });
+        
+        document.body.appendChild(toggleBtn);
+    }
 
     // Create configuration window
     function createConfigWindow() {
@@ -179,6 +312,20 @@ SOFTWARE.
         prefixDiv.appendChild(prefixCheckbox);
         prefixDiv.appendChild(prefixLabel);
         configWindow.appendChild(prefixDiv);
+
+        // Add toggle for tooltips
+        const tooltipDiv = document.createElement('div');
+        tooltipDiv.style.marginBottom = '20px';
+        const tooltipCheckbox = document.createElement('input');
+        tooltipCheckbox.type = 'checkbox';
+        tooltipCheckbox.checked = USER_CONFIG.enableTooltips;
+        tooltipCheckbox.id = 'enable-tooltips';
+        const tooltipLabel = document.createElement('label');
+        tooltipLabel.htmlFor = 'enable-tooltips';
+        tooltipLabel.textContent = ' Enable tooltips with extended descriptions';
+        tooltipDiv.appendChild(tooltipCheckbox);
+        tooltipDiv.appendChild(tooltipLabel);
+        configWindow.insertBefore(tooltipDiv, prefixDiv.nextSibling);
 
         // Commit Types Configuration
         const typesContainer = document.createElement('div');
@@ -482,6 +629,7 @@ SOFTWARE.
         saveButton.onclick = () => {
             const newConfig = { ...USER_CONFIG };
             newConfig.removePrefix = prefixCheckbox.checked;
+            newConfig.enableTooltips = tooltipCheckbox.checked;
             newConfig.commitTypes = {};
 
             typesContainer.querySelectorAll('input, select').forEach(input => {
@@ -512,8 +660,183 @@ SOFTWARE.
         document.body.appendChild(configWindow);
     }
 
+    // Create export/import dialog
+    function createExportImportDialog() {
+        // Check if dialog already exists
+        if (document.getElementById('config-export-import')) {
+            document.getElementById('config-export-import').remove();
+        }
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'config-export-import';
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 20px;
+            z-index: 9999;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #c9d1d9;
+            box-shadow: 0 0 20px rgba(0,0,0,0.7);
+        `;
+        
+        const title = document.createElement('h2');
+        title.textContent = 'Export/Import Configuration';
+        title.style.marginBottom = '15px';
+        
+        const exportSection = document.createElement('div');
+        exportSection.style.marginBottom = '20px';
+        
+        const exportTitle = document.createElement('h3');
+        exportTitle.textContent = 'Export Configuration';
+        exportTitle.style.marginBottom = '10px';
+        
+        const configOutput = document.createElement('textarea');
+        configOutput.readOnly = true;
+        configOutput.value = JSON.stringify(USER_CONFIG, null, 2);
+        configOutput.style.cssText = `
+            width: 100%;
+            height: 150px;
+            background: #161b22;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            resize: vertical;
+            margin-bottom: 10px;
+        `;
+        
+        const copyButton = document.createElement('button');
+        copyButton.textContent = 'Copy to Clipboard';
+        copyButton.style.cssText = `
+            padding: 6px 16px;
+            background: #238636;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        `;
+        
+        copyButton.onclick = () => {
+            configOutput.select();
+            document.execCommand('copy');
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy to Clipboard';
+            }, 2000);
+        };
+        
+        exportSection.appendChild(exportTitle);
+        exportSection.appendChild(configOutput);
+        exportSection.appendChild(copyButton);
+        
+        const importSection = document.createElement('div');
+        importSection.style.marginBottom = '20px';
+        
+        const importTitle = document.createElement('h3');
+        importTitle.textContent = 'Import Configuration';
+        importTitle.style.marginBottom = '10px';
+        
+        const configInput = document.createElement('textarea');
+        configInput.placeholder = 'Paste configuration JSON here...';
+        configInput.style.cssText = `
+            width: 100%;
+            height: 150px;
+            background: #161b22;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            resize: vertical;
+            margin-bottom: 10px;
+        `;
+        
+        const importButton = document.createElement('button');
+        importButton.textContent = 'Import';
+        importButton.style.cssText = `
+            padding: 6px 16px;
+            background: #238636;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        `;
+        
+        importButton.onclick = () => {
+            try {
+                const newConfig = JSON.parse(configInput.value);
+                
+                // Validate basic structure
+                if (!newConfig.commitTypes) {
+                    throw new Error('Invalid configuration: missing commitTypes object');
+                }
+                
+                if (confirm('Are you sure you want to import this configuration? This will overwrite your current settings.')) {
+                    GM_setValue('commitLabelsConfig', newConfig);
+                    alert('Configuration imported successfully! Page will reload to apply changes.');
+                    location.reload();
+                }
+            } catch (error) {
+                alert('Error importing configuration: ' + error.message);
+            }
+        };
+        
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.style.cssText = `
+            padding: 6px 16px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            cursor: pointer;
+        `;
+        
+        closeButton.onclick = () => {
+            document.body.removeChild(dialog);
+        };
+        
+        importSection.appendChild(importTitle);
+        importSection.appendChild(configInput);
+        importSection.appendChild(importButton);
+        
+        dialog.appendChild(title);
+        dialog.appendChild(exportSection);
+        dialog.appendChild(importSection);
+        dialog.appendChild(closeButton);
+        
+        document.body.appendChild(dialog);
+    }
+
     // Register configuration menu command
     GM_registerMenuCommand('Configure Commit Labels', createConfigWindow);
+    GM_registerMenuCommand('Toggle Labels', () => {
+        USER_CONFIG.labelsVisible = !USER_CONFIG.labelsVisible;
+        GM_setValue('commitLabelsConfig', USER_CONFIG);
+        
+        // Toggle label visibility
+        document.querySelectorAll('.commit-label').forEach(label => {
+            label.style.display = USER_CONFIG.labelsVisible ? 'inline-flex' : 'none';
+        });
+        
+        // Update toggle button if it exists
+        const toggleBtn = document.getElementById('commit-labels-toggle');
+        if (toggleBtn) {
+            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+            toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
+        }
+    });
+    GM_registerMenuCommand('Export/Import Config', createExportImportDialog);
 
     // Check if we're on a commit page
     function isCommitPage() {
@@ -521,82 +844,125 @@ SOFTWARE.
                window.location.pathname.includes('/commit/');
     }
 
+    // Update colors when theme changes
+    function updateThemeColors() {
+        const newTheme = detectTheme();
+        if (newTheme !== currentTheme) {
+            currentTheme = newTheme;
+            COLORS = THEME_COLORS[currentTheme];
+            
+            // Update existing labels
+            document.querySelectorAll('.commit-label').forEach(label => {
+                const type = label.dataset.commitType;
+                if (type && USER_CONFIG.commitTypes[type]) {
+                    const color = COLORS[USER_CONFIG.commitTypes[type].color];
+                    label.style.backgroundColor = color.bg;
+                    label.style.color = color.text;
+                }
+            });
+        }
+    }
+
     function addCommitLabels() {
         // Only proceed if we're on a commit page
         if (!isCommitPage()) return;
 
+        // Update theme colors
+        updateThemeColors();
+        
+        // Create toggle button if it doesn't exist
+        createLabelToggle();
+
         // Update selector to match GitHub's current DOM structure
         const commitMessages = document.querySelectorAll('.markdown-title a[data-pjax="true"]');
 
-        commitMessages.forEach(message => {
-            const text = message.textContent.trim();
-            const match = text.match(/^(\w+)(?:\([\w-]+\))?:\s*(.*)/);
+        // Debounce and batch process for performance improvement
+        let processedCount = 0;
+        const batchSize = 20;
+        const commitMessagesArray = Array.from(commitMessages);
+        
+        const processCommitBatch = (startIndex) => {
+            const endIndex = Math.min(startIndex + batchSize, commitMessagesArray.length);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const message = commitMessagesArray[i];
+                const text = message.textContent.trim();
+                const match = text.match(/^(\w+)(?:\([\w-]+\))?:\s*(.*)/);
 
-            if (match) {
-                const type = match[1].toLowerCase();
-                const restOfMessage = match[2];
+                if (match) {
+                    const type = match[1].toLowerCase();
+                    const restOfMessage = match[2];
 
-                if (USER_CONFIG.commitTypes[type]) {
-                    // Only add label if it hasn't been added yet
-                    if (!message.parentElement.querySelector('.commit-label')) {
-                        const label = document.createElement('span');
-                        label.className = 'commit-label';
-                        const color = COLORS[USER_CONFIG.commitTypes[type].color];
+                    if (USER_CONFIG.commitTypes[type]) {
+                        // Only add label if it hasn't been added yet
+                        if (!message.parentElement.querySelector('.commit-label')) {
+                            const label = document.createElement('span');
+                            label.className = 'commit-label';
+                            label.dataset.commitType = type;
+                            
+                            const color = COLORS[USER_CONFIG.commitTypes[type].color];
+                            
+                            // Apply styles
+                            const styles = {
+                                ...USER_CONFIG.labelStyle,
+                                backgroundColor: color.bg,
+                                color: color.text,
+                                display: USER_CONFIG.labelsVisible ? 'inline-flex' : 'none'
+                            };
 
-                        // Calculate perceived lightness (using GitHub's formula)
-                        const perceivedL = (color.l / 100);
-                        const lightnessSwitch = perceivedL <= 0.6 ? 1 : 0;
-                        const lightenBy = ((0.6 - perceivedL) * 100) * lightnessSwitch;
+                            label.style.cssText = Object.entries(styles)
+                                .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
+                                .join(';');
 
-                        // Apply styles
-                        const styles = {
-                            ...USER_CONFIG.labelStyle,
-                            '--label-h': color.h,
-                            '--label-s': color.s,
-                            '--label-l': color.l,
-                            'color': `hsl(${color.h}, ${color.s}%, ${color.l + lightenBy}%)`,
-                            'background': `hsla(${color.h}, ${color.s}%, ${color.l}%, 0.18)`,
-                            'borderColor': `hsla(${color.h}, ${color.s}%, ${color.l + lightenBy}%, 0.3)`,
-                            backgroundColor: color.bg,
-                            color: color.text
-                        };
+                            // Add tooltip if enabled
+                            if (USER_CONFIG.enableTooltips && USER_CONFIG.commitTypes[type].description) {
+                                label.title = USER_CONFIG.commitTypes[type].description;
+                            }
 
-                        label.style.cssText = Object.entries(styles)
-                            .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
-                            .join(';');
+                            // Add hover effect
+                            label.addEventListener('mouseenter', () => {
+                                label.style.transform = 'translateY(-1px)';
+                                label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                            });
 
-                        // Add hover effect
-                        label.addEventListener('mouseenter', () => {
-                            label.style.transform = 'translateY(-1px)';
-                            label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-                        });
+                            label.addEventListener('mouseleave', () => {
+                                label.style.transform = 'translateY(0)';
+                                label.style.boxShadow = styles.boxShadow;
+                            });
 
-                        label.addEventListener('mouseleave', () => {
-                            label.style.transform = 'translateY(0)';
-                            label.style.boxShadow = styles.boxShadow;
-                        });
+                            const emoji = document.createElement('span');
+                            emoji.style.marginRight = '4px';
+                            emoji.style.fontSize = '14px';
+                            emoji.style.lineHeight = '1';
+                            emoji.textContent = USER_CONFIG.commitTypes[type].emoji;
 
-                        const emoji = document.createElement('span');
-                        emoji.style.marginRight = '4px';
-                        emoji.style.fontSize = '14px';
-                        emoji.style.lineHeight = '1';
-                        emoji.textContent = USER_CONFIG.commitTypes[type].emoji;
+                            const labelText = document.createElement('span');
+                            labelText.textContent = USER_CONFIG.commitTypes[type].label;
 
-                        const labelText = document.createElement('span');
-                        labelText.textContent = USER_CONFIG.commitTypes[type].label;
+                            label.appendChild(emoji);
+                            label.appendChild(labelText);
+                            message.parentElement.insertBefore(label, message);
 
-                        label.appendChild(emoji);
-                        label.appendChild(labelText);
-                        message.parentElement.insertBefore(label, message);
-
-                        // Update the commit message text to remove the type prefix if enabled
-                        if (USER_CONFIG.removePrefix) {
-                            message.textContent = restOfMessage;
+                            // Update the commit message text to remove the type prefix if enabled
+                            if (USER_CONFIG.removePrefix) {
+                                message.textContent = restOfMessage;
+                            }
                         }
                     }
                 }
             }
-        });
+            
+            // Process next batch if needed
+            processedCount += (endIndex - startIndex);
+            if (processedCount < commitMessagesArray.length) {
+                setTimeout(() => processCommitBatch(endIndex), 0);
+            }
+        };
+        
+        // Start processing first batch
+        if (commitMessagesArray.length > 0) {
+            processCommitBatch(0);
+        }
     }
 
     // Only set up observers if we're on a commit page
@@ -615,6 +981,20 @@ SOFTWARE.
 
         // Start observing the document with the configured parameters
         observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Watch for theme changes
+        const themeObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.attributeName === 'data-color-mode' || 
+                    mutation.attributeName === 'data-dark-theme' || 
+                    mutation.attributeName === 'data-light-theme') {
+                    updateThemeColors();
+                }
+            }
+        });
+        
+        // Start observing the html element for theme changes
+        themeObserver.observe(document.documentElement, { attributes: true });
     }
 
     // Initialize on page load
