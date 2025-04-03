@@ -7,10 +7,13 @@ A userscript that enhances GitHub commits by adding beautiful labels for convent
 
 - 🏷️ Adds beautiful labels to conventional commit messages
 - 🎨 GitHub-style design that matches the platform
+- 🌓 Automatic theme detection (light, dark, and dark dimmed)
+- 💬 Informative tooltips showing detailed descriptions
+- 👆 Toggle button to quickly show/hide labels
+- 📤 Export/Import configurations for team sharing
 - ⚙️ Fully customizable through a user-friendly configuration panel
 - 🔄 Supports multiple aliases for each commit type
 - 🎯 Works on commit history and single commit pages
-- 🌙 Optimized for GitHub's dark theme
 
 
 ![2025-02-07_09-17-18](https://github.com/user-attachments/assets/9ad5e643-e2b0-41f9-b332-f0860a631016)
@@ -40,6 +43,13 @@ Default commit types and their aliases:
 - **Chore**: `chore`
 - **Revert**: `revert`
 - **WIP**: `wip`
+- **Security**: `security`
+- **Internationalization**: `i18n`
+- **Accessibility**: `a11y`
+- **API**: `api`
+- **Database**: `data`
+- **Configuration**: `config`
+- **Initial Setup**: `init`
 - **You Can ADD More**
   
 ## Installation
@@ -63,6 +73,9 @@ Default commit types and their aliases:
    - Change emojis
    - Modify colors
    - Toggle prefix removal
+   - Enable/disable tooltips
+   - Show/hide floating toggle button
+   - Export/Import your configuration
   
   ![2025-02-07_09-18-39](https://github.com/user-attachments/assets/a580845e-88ff-40e0-922e-da8247720eed)
 
