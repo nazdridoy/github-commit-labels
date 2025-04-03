@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.2.0
+// @version      1.2.1
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -191,6 +191,8 @@ SOFTWARE.
             // Removed
             removed: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
             remove: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
+            delete: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
+            del: { emoji: '🗑️', label: 'Removed', color: 'red', description: 'Removing files/code' },
 
             // Fixes
             fix: { emoji: '🐛', label: 'Fix', color: 'purple', description: 'Bug fixes/corrections to errors' },
