@@ -389,7 +389,8 @@ SOFTWARE.
                 border: isDark ? '1px solid #30363d' : '1px solid #d0d7de'
             },
             text: {
-                dim: isDark ? '#8b949e' : '#6e7781'
+                dim: isDark ? '#8b949e' : '#6e7781',
+                link: isDark ? '#58a6ff' : '#0969da'
             }
         };
         
@@ -411,10 +412,59 @@ SOFTWARE.
             box-shadow: ${configStyles.window.boxShadow};
         `;
 
+        // Header with title and repo link
+        const titleContainer = document.createElement('div');
+        titleContainer.style.display = 'flex';
+        titleContainer.style.justifyContent = 'space-between';
+        titleContainer.style.alignItems = 'center';
+        titleContainer.style.marginBottom = '20px';
+
         const title = document.createElement('h2');
         title.textContent = 'Commit Labels Configuration';
-        title.style.marginBottom = '20px';
-        configWindow.appendChild(title);
+        title.style.margin = '0';
+
+        // Repository link container with profile pic
+        const repoContainer = document.createElement('div');
+        repoContainer.style.display = 'flex';
+        repoContainer.style.alignItems = 'center';
+        repoContainer.style.gap = '8px';
+        
+        // Owner profile picture
+        const profilePic = document.createElement('img');
+        profilePic.src = 'https://raw.githubusercontent.com/nazdridoy/nazhome/main/public/favicons/nazhome.svg';
+        profilePic.alt = 'Owner';
+        profilePic.style.cssText = `
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: ${isDark ? '#30363d' : '#eaeef2'};
+            padding: 3px;
+            vertical-align: middle;
+        `;
+        
+        const repoLink = document.createElement('a');
+        repoLink.href = 'https://github.com/nazdridoy/github-commit-labels';
+        repoLink.target = '_blank';
+        repoLink.textContent = 'GitHub Repository';
+        repoLink.style.cssText = `
+            color: ${configStyles.text.link};
+            text-decoration: none;
+            font-size: 15px;
+            vertical-align: middle;
+        `;
+        repoLink.addEventListener('mouseenter', () => {
+            repoLink.style.textDecoration = 'underline';
+        });
+        repoLink.addEventListener('mouseleave', () => {
+            repoLink.style.textDecoration = 'none';
+        });
+
+        repoContainer.appendChild(profilePic);
+        repoContainer.appendChild(repoLink);
+        
+        titleContainer.appendChild(title);
+        titleContainer.appendChild(repoContainer);
+        configWindow.appendChild(titleContainer);
 
         // Remove Prefix Option
         const prefixDiv = document.createElement('div');
