@@ -240,38 +240,42 @@ SOFTWARE.
         
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'commit-labels-toggle';
-        toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+        toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️';
         toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
         toggleBtn.style.cssText = `
             position: fixed;
             bottom: 20px;
             right: 20px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #238636;
-            color: #ffffff;
-            border: none;
-            font-size: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: rgba(31, 35, 40, 0.6);
+            color: #adbac7;
+            border: 1px solid rgba(205, 217, 229, 0.1);
+            font-size: 14px;
             cursor: pointer;
             z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            opacity: 0.8;
-            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            opacity: 0.5;
+            transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
+            backdrop-filter: blur(4px);
         `;
         
         // Add hover effect
         toggleBtn.addEventListener('mouseenter', () => {
             toggleBtn.style.opacity = '1';
-            toggleBtn.style.transform = 'scale(1.1)';
+            toggleBtn.style.background = currentTheme === 'light' ? 
+                'rgba(246, 248, 250, 0.8)' : 'rgba(22, 27, 34, 0.8)';
+            toggleBtn.style.color = currentTheme === 'light' ? '#24292f' : '#e6edf3';
         });
         
         toggleBtn.addEventListener('mouseleave', () => {
-            toggleBtn.style.opacity = '0.8';
-            toggleBtn.style.transform = 'scale(1)';
+            toggleBtn.style.opacity = '0.5';
+            toggleBtn.style.background = 'rgba(31, 35, 40, 0.6)';
+            toggleBtn.style.color = '#adbac7';
         });
         
         // Toggle labels on click
@@ -280,7 +284,8 @@ SOFTWARE.
             GM_setValue('commitLabelsConfig', USER_CONFIG);
             
             // Update button
-            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️';
+            toggleBtn.style.textDecoration = USER_CONFIG.labelsVisible ? 'none' : 'line-through';
             toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
             
             // Toggle label visibility
@@ -290,6 +295,9 @@ SOFTWARE.
         });
         
         document.body.appendChild(toggleBtn);
+        
+        // Set initial state
+        toggleBtn.style.textDecoration = USER_CONFIG.labelsVisible ? 'none' : 'line-through';
     }
 
     // Create configuration window
@@ -424,6 +432,30 @@ SOFTWARE.
         
         tooltipDiv.appendChild(tooltipExplanation);
         configWindow.insertBefore(tooltipDiv, prefixDiv.nextSibling);
+
+        // After prefixDiv and tooltipDiv, add a toggle for showing the floating button
+        const floatingBtnDiv = document.createElement('div');
+        floatingBtnDiv.style.marginBottom = '20px';
+        
+        // Add showFloatingButton to USER_CONFIG if it doesn't exist
+        if (USER_CONFIG.showFloatingButton === undefined) {
+            USER_CONFIG.showFloatingButton = true;
+            GM_setValue('commitLabelsConfig', USER_CONFIG);
+        }
+        
+        const floatingBtnCheckbox = document.createElement('input');
+        floatingBtnCheckbox.type = 'checkbox';
+        floatingBtnCheckbox.checked = USER_CONFIG.showFloatingButton;
+        floatingBtnCheckbox.id = 'show-floating-btn';
+        
+        const floatingBtnLabel = document.createElement('label');
+        floatingBtnLabel.htmlFor = 'show-floating-btn';
+        floatingBtnLabel.textContent = ' Show floating toggle button';
+        
+        floatingBtnDiv.appendChild(floatingBtnCheckbox);
+        floatingBtnDiv.appendChild(floatingBtnLabel);
+        
+        configWindow.insertBefore(floatingBtnDiv, tooltipDiv.nextSibling);
 
         // Commit Types Configuration
         const typesContainer = document.createElement('div');
@@ -728,6 +760,7 @@ SOFTWARE.
             const newConfig = { ...USER_CONFIG };
             newConfig.removePrefix = prefixCheckbox.checked;
             newConfig.enableTooltips = tooltipCheckbox.checked;
+            newConfig.showFloatingButton = floatingBtnCheckbox.checked;
             newConfig.commitTypes = {};
 
             typesContainer.querySelectorAll('input, select').forEach(input => {
@@ -930,7 +963,8 @@ SOFTWARE.
         // Update toggle button if it exists
         const toggleBtn = document.getElementById('commit-labels-toggle');
         if (toggleBtn) {
-            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️ ❌';
+            toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️';
+            toggleBtn.style.textDecoration = USER_CONFIG.labelsVisible ? 'none' : 'line-through';
             toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
         }
     });
@@ -968,8 +1002,10 @@ SOFTWARE.
         // Update theme colors
         updateThemeColors();
         
-        // Create toggle button if it doesn't exist
-        createLabelToggle();
+        // Create toggle button if it doesn't exist and is enabled
+        if (USER_CONFIG.showFloatingButton !== false) {
+            createLabelToggle();
+        }
 
         // Update selector to match GitHub's current DOM structure
         const commitMessages = document.querySelectorAll('.markdown-title a[data-pjax="true"]');
