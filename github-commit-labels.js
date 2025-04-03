@@ -45,15 +45,69 @@ SOFTWARE.
     // Detect GitHub theme (dark, light, or dark dimmed)
     function detectTheme() {
         const html = document.documentElement;
-        if (html.getAttribute('data-color-mode') === 'dark') {
+        const colorMode = html.getAttribute('data-color-mode');
+        
+        // Handle sync with system (auto) setting
+        if (colorMode === 'auto') {
+            // Get the system preference
+            const darkThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+            const isDarkMode = darkThemeMedia.matches;
+            
+            if (isDarkMode) {
+                // System is in dark mode, but we need to check what's set for "Night theme"
+                const darkThemeSetting = html.getAttribute('data-dark-theme');
+                
+                // If a light theme variant is set for "Night theme"
+                if (darkThemeSetting && darkThemeSetting.startsWith('light')) {
+                    return darkThemeSetting; // Return the specific light theme variant
+                }
+                
+                // Otherwise return the dark theme variant
+                return darkThemeSetting === 'dark_dimmed' ? 'dark_dimmed' : 'dark';
+            } else {
+                // System is in light mode, check what's set for "Day theme"
+                const lightThemeSetting = html.getAttribute('data-light-theme');
+                
+                // If a dark theme variant is set for "Day theme"
+                if (lightThemeSetting && lightThemeSetting.startsWith('dark')) {
+                    return lightThemeSetting; // Return the specific dark theme variant
+                }
+                
+                return 'light'; // Default to light theme
+            }
+        }
+        
+        // Direct theme setting (not auto)
+        if (colorMode === 'dark') {
             const darkTheme = html.getAttribute('data-dark-theme');
             return darkTheme === 'dark_dimmed' ? 'dark_dimmed' : 'dark';
+        } else {
+            const lightTheme = html.getAttribute('data-light-theme');
+            // If a specific light theme variant is set
+            if (lightTheme && lightTheme !== 'light') {
+                return lightTheme;
+            }
+            return 'light';
         }
-        return 'light';
+    }
+
+    // Helper function to determine if a theme is a dark variant
+    function isDarkTheme(theme) {
+        return theme && (theme === 'dark' || theme === 'dark_dimmed' || 
+               theme === 'dark_high_contrast' || theme === 'dark_colorblind' || 
+               theme === 'dark_tritanopia');
     }
 
     // Get current theme
     let currentTheme = detectTheme();
+    
+    // Watch for system color scheme changes
+    const darkThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    darkThemeMedia.addEventListener('change', () => {
+        if (document.documentElement.getAttribute('data-color-mode') === 'auto') {
+            updateThemeColors();
+        }
+    });
     
     // Color definitions based on theme
     const THEME_COLORS = {
@@ -302,22 +356,59 @@ SOFTWARE.
 
     // Create configuration window
     function createConfigWindow() {
+        // Get current theme colors for the config window
+        const isDark = isDarkTheme(currentTheme);
+        
+        const configStyles = {
+            window: {
+                background: isDark ? '#0d1117' : '#ffffff',
+                border: isDark ? '1px solid #30363d' : '1px solid #d0d7de',
+                color: isDark ? '#c9d1d9' : '#24292f',
+                boxShadow: isDark ? '0 0 10px rgba(0,0,0,0.5)' : '0 0 10px rgba(0,0,0,0.2)'
+            },
+            button: {
+                primary: {
+                    background: '#238636',
+                    color: '#ffffff',
+                    border: 'none'
+                },
+                secondary: {
+                    background: isDark ? '#21262d' : '#f6f8fa',
+                    color: isDark ? '#c9d1d9' : '#24292f',
+                    border: isDark ? '1px solid #30363d' : '1px solid #d0d7de'
+                },
+                danger: {
+                    background: isDark ? '#21262d' : '#f6f8fa',
+                    color: '#f85149',
+                    border: isDark ? '1px solid #30363d' : '1px solid #d0d7de'
+                }
+            },
+            input: {
+                background: isDark ? '#161b22' : '#f6f8fa',
+                color: isDark ? '#c9d1d9' : '#24292f',
+                border: isDark ? '1px solid #30363d' : '1px solid #d0d7de'
+            },
+            text: {
+                dim: isDark ? '#8b949e' : '#6e7781'
+            }
+        };
+        
         const configWindow = document.createElement('div');
         configWindow.style.cssText = `
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: #0d1117;
-            border: 1px solid #30363d;
+            background: ${configStyles.window.background};
+            border: ${configStyles.window.border};
             border-radius: 6px;
             padding: 20px;
             z-index: 9999;
             width: 600px;
             max-height: 80vh;
             overflow-y: auto;
-            color: #c9d1d9;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            color: ${configStyles.window.color};
+            box-shadow: ${configStyles.window.boxShadow};
         `;
 
         const title = document.createElement('h2');
@@ -376,8 +467,8 @@ SOFTWARE.
             height: 24px;
             padding: 0 10px;
             border-radius: 20px;
-            background: rgba(35, 134, 54, 0.2);
-            color: #7ee787;
+            background: ${isDark ? 'rgba(35, 134, 54, 0.2)' : 'rgba(31, 136, 61, 0.1)'};
+            color: ${isDark ? '#7ee787' : '#1a7f37'};
             cursor: help;
         `;
         
@@ -402,11 +493,11 @@ SOFTWARE.
                 left: ${rect.left}px;
                 max-width: 300px;
                 padding: 8px 12px;
-                color: #e6edf3;
+                color: ${isDark ? '#e6edf3' : '#ffffff'};
                 text-align: center;
-                background-color: #161b22;
+                background-color: ${isDark ? '#161b22' : '#24292f'};
                 border-radius: 6px;
-                border: 1px solid #30363d;
+                border: ${isDark ? '1px solid #30363d' : '1px solid #d0d7de'};
                 box-shadow: 0 3px 12px rgba(0,0,0,0.4);
                 font-size: 12px;
                 z-index: 10000;
@@ -428,7 +519,7 @@ SOFTWARE.
         // Add explanation text
         const tooltipExplanation = document.createElement('div');
         tooltipExplanation.textContent = 'Tooltips show detailed descriptions when hovering over commit labels.';
-        tooltipExplanation.style.color = '#8b949e';
+        tooltipExplanation.style.color = configStyles.text.dim;
         tooltipExplanation.style.fontSize = '12px';
         tooltipExplanation.style.marginTop = '5px';
         
@@ -493,7 +584,7 @@ SOFTWARE.
             typeContainer.style.gap = '4px';
 
             const typeSpan = document.createElement('span');
-            typeSpan.style.color = '#8b949e';
+            typeSpan.style.color = configStyles.text.dim;
             typeSpan.style.flex = '1';
             typeSpan.textContent = types.join(', ') + ':';
 
@@ -502,9 +593,9 @@ SOFTWARE.
             editAliasButton.title = 'Edit Aliases';
             editAliasButton.style.cssText = `
                 padding: 2px 4px;
-                background: #21262d;
-                color: #58a6ff;
-                border: 1px solid #30363d;
+                background: ${configStyles.button.secondary.background};
+                color: ${isDark ? '#58a6ff' : '#0969da'};
+                border: ${configStyles.button.secondary.border};
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 10px;
@@ -555,6 +646,11 @@ SOFTWARE.
             emojiInput.type = 'text';
             emojiInput.value = config.emoji;
             emojiInput.style.width = '40px';
+            emojiInput.style.background = configStyles.input.background;
+            emojiInput.style.color = configStyles.input.color;
+            emojiInput.style.border = configStyles.input.border;
+            emojiInput.style.borderRadius = '4px';
+            emojiInput.style.padding = '4px';
             emojiInput.dataset.types = types.join(',');
             emojiInput.dataset.field = 'emoji';
             typeDiv.appendChild(emojiInput);
@@ -564,6 +660,11 @@ SOFTWARE.
             labelInput.type = 'text';
             labelInput.value = config.label;
             labelInput.style.width = '120px';
+            labelInput.style.background = configStyles.input.background;
+            labelInput.style.color = configStyles.input.color;
+            labelInput.style.border = configStyles.input.border;
+            labelInput.style.borderRadius = '4px';
+            labelInput.style.padding = '4px';
             labelInput.dataset.types = types.join(',');
             labelInput.dataset.field = 'label';
             typeDiv.appendChild(labelInput);
@@ -577,6 +678,11 @@ SOFTWARE.
                 if (config.color === color) option.selected = true;
                 colorSelect.appendChild(option);
             });
+            colorSelect.style.background = configStyles.input.background;
+            colorSelect.style.color = configStyles.input.color;
+            colorSelect.style.border = configStyles.input.border;
+            colorSelect.style.borderRadius = '4px';
+            colorSelect.style.padding = '4px';
             colorSelect.dataset.types = types.join(',');
             colorSelect.dataset.field = 'color';
             typeDiv.appendChild(colorSelect);
@@ -586,9 +692,9 @@ SOFTWARE.
             deleteButton.textContent = '🗑️';
             deleteButton.style.cssText = `
                 padding: 2px 8px;
-                background: #21262d;
-                color: #f85149;
-                border: 1px solid #30363d;
+                background: ${configStyles.button.danger.background};
+                color: ${configStyles.button.danger.color};
+                border: ${configStyles.button.danger.border};
                 border-radius: 4px;
                 cursor: pointer;
             `;
@@ -609,9 +715,9 @@ SOFTWARE.
         addNewButton.style.cssText = `
             margin-bottom: 15px;
             padding: 5px 16px;
-            background: #238636;
-            color: #fff;
-            border: none;
+            background: ${configStyles.button.primary.background};
+            color: ${configStyles.button.primary.color};
+            border: ${configStyles.button.primary.border};
             border-radius: 6px;
             cursor: pointer;
         `;
@@ -632,7 +738,8 @@ SOFTWARE.
                 const baseConfig = {
                     emoji: '🔄',
                     label: types[0].charAt(0).toUpperCase() + types[0].slice(1),
-                    color: 'blue'
+                    color: 'blue',
+                    description: 'Custom commit type'
                 };
 
                 // Add all types to config with the same settings
@@ -650,7 +757,7 @@ SOFTWARE.
                 // Type names (with aliases)
                 const typeSpan = document.createElement('span');
                 typeSpan.style.width = '150px';
-                typeSpan.style.color = '#8b949e';
+                typeSpan.style.color = configStyles.text.dim;
                 typeSpan.textContent = types.join(', ') + ':';
                 typeDiv.appendChild(typeSpan);
 
@@ -659,6 +766,11 @@ SOFTWARE.
                 emojiInput.type = 'text';
                 emojiInput.value = baseConfig.emoji;
                 emojiInput.style.width = '40px';
+                emojiInput.style.background = configStyles.input.background;
+                emojiInput.style.color = configStyles.input.color;
+                emojiInput.style.border = configStyles.input.border;
+                emojiInput.style.borderRadius = '4px';
+                emojiInput.style.padding = '4px';
                 emojiInput.dataset.types = types.join(',');
                 emojiInput.dataset.field = 'emoji';
                 typeDiv.appendChild(emojiInput);
@@ -668,6 +780,11 @@ SOFTWARE.
                 labelInput.type = 'text';
                 labelInput.value = baseConfig.label;
                 labelInput.style.width = '120px';
+                labelInput.style.background = configStyles.input.background;
+                labelInput.style.color = configStyles.input.color;
+                labelInput.style.border = configStyles.input.border;
+                labelInput.style.borderRadius = '4px';
+                labelInput.style.padding = '4px';
                 labelInput.dataset.types = types.join(',');
                 labelInput.dataset.field = 'label';
                 typeDiv.appendChild(labelInput);
@@ -681,6 +798,11 @@ SOFTWARE.
                     if (color === 'blue') option.selected = true;
                     colorSelect.appendChild(option);
                 });
+                colorSelect.style.background = configStyles.input.background;
+                colorSelect.style.color = configStyles.input.color;
+                colorSelect.style.border = configStyles.input.border;
+                colorSelect.style.borderRadius = '4px';
+                colorSelect.style.padding = '4px';
                 colorSelect.dataset.types = types.join(',');
                 colorSelect.dataset.field = 'color';
                 typeDiv.appendChild(colorSelect);
@@ -690,9 +812,9 @@ SOFTWARE.
                 deleteButton.textContent = '🗑️';
                 deleteButton.style.cssText = `
                     padding: 2px 8px;
-                    background: #21262d;
-                    color: #f85149;
-                    border: 1px solid #30363d;
+                    background: ${configStyles.button.danger.background};
+                    color: ${configStyles.button.danger.color};
+                    border: ${configStyles.button.danger.border};
                     border-radius: 4px;
                     cursor: pointer;
                 `;
@@ -721,9 +843,9 @@ SOFTWARE.
         saveButton.textContent = 'Save';
         saveButton.style.cssText = `
             padding: 5px 16px;
-            background: #238636;
-            color: #fff;
-            border: none;
+            background: ${configStyles.button.primary.background};
+            color: ${configStyles.button.primary.color};
+            border: ${configStyles.button.primary.border};
             border-radius: 6px;
             cursor: pointer;
         `;
@@ -732,9 +854,9 @@ SOFTWARE.
         closeButton.textContent = 'Close';
         closeButton.style.cssText = `
             padding: 5px 16px;
-            background: #21262d;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
+            background: ${configStyles.button.secondary.background};
+            color: ${configStyles.button.secondary.color};
+            border: ${configStyles.button.secondary.border};
             border-radius: 6px;
             cursor: pointer;
         `;
@@ -744,9 +866,9 @@ SOFTWARE.
         resetButton.textContent = 'Reset to Default';
         resetButton.style.cssText = `
             padding: 5px 16px;
-            background: #21262d;
-            color: #f85149;
-            border: 1px solid #30363d;
+            background: ${configStyles.button.danger.background};
+            color: ${configStyles.button.danger.color};
+            border: ${configStyles.button.danger.border};
             border-radius: 6px;
             cursor: pointer;
             margin-right: auto;  // This pushes Save/Close to the right
@@ -984,15 +1106,26 @@ SOFTWARE.
         const newTheme = detectTheme();
         if (newTheme !== currentTheme) {
             currentTheme = newTheme;
-            COLORS = THEME_COLORS[currentTheme];
+            
+            // Map theme variants to our base themes for colors
+            let baseTheme = newTheme;
+            if (newTheme.startsWith('light_')) {
+                baseTheme = 'light';
+            } else if (newTheme.startsWith('dark_') && newTheme !== 'dark_dimmed') {
+                baseTheme = 'dark';
+            }
+            
+            COLORS = THEME_COLORS[baseTheme] || THEME_COLORS.light;
             
             // Update existing labels
             document.querySelectorAll('.commit-label').forEach(label => {
                 const type = label.dataset.commitType;
                 if (type && USER_CONFIG.commitTypes[type]) {
                     const color = COLORS[USER_CONFIG.commitTypes[type].color];
-                    label.style.backgroundColor = color.bg;
-                    label.style.color = color.text;
+                    if (color) {
+                        label.style.backgroundColor = color.bg;
+                        label.style.color = color.text;
+                    }
                 }
             });
         }
