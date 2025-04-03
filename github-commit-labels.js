@@ -332,9 +332,10 @@ SOFTWARE.
         prefixCheckbox.type = 'checkbox';
         prefixCheckbox.checked = USER_CONFIG.removePrefix;
         prefixCheckbox.id = 'remove-prefix';
+        prefixCheckbox.style.marginRight = '5px';
         const prefixLabel = document.createElement('label');
         prefixLabel.htmlFor = 'remove-prefix';
-        prefixLabel.textContent = ' Remove commit type prefix from message';
+        prefixLabel.textContent = 'Remove commit type prefix from message';
         prefixDiv.appendChild(prefixCheckbox);
         prefixDiv.appendChild(prefixLabel);
         configWindow.appendChild(prefixDiv);
@@ -352,10 +353,11 @@ SOFTWARE.
         tooltipCheckbox.type = 'checkbox';
         tooltipCheckbox.checked = USER_CONFIG.enableTooltips;
         tooltipCheckbox.id = 'enable-tooltips';
+        tooltipCheckbox.style.marginRight = '5px';
         
         const tooltipLabel = document.createElement('label');
         tooltipLabel.htmlFor = 'enable-tooltips';
-        tooltipLabel.textContent = ' Enable tooltips with extended descriptions';
+        tooltipLabel.textContent = 'Enable tooltips with extended descriptions';
         tooltipLabel.style.marginRight = '15px';
         
         // Add tooltip preview
@@ -447,10 +449,11 @@ SOFTWARE.
         floatingBtnCheckbox.type = 'checkbox';
         floatingBtnCheckbox.checked = USER_CONFIG.showFloatingButton;
         floatingBtnCheckbox.id = 'show-floating-btn';
+        floatingBtnCheckbox.style.marginRight = '5px';
         
         const floatingBtnLabel = document.createElement('label');
         floatingBtnLabel.htmlFor = 'show-floating-btn';
-        floatingBtnLabel.textContent = ' Show floating toggle button';
+        floatingBtnLabel.textContent = 'Show floating toggle button';
         
         floatingBtnDiv.appendChild(floatingBtnCheckbox);
         floatingBtnDiv.appendChild(floatingBtnLabel);
