@@ -206,9 +206,27 @@ SOFTWARE.
     // Get saved configuration or use default
     const USER_CONFIG = GM_getValue('commitLabelsConfig', DEFAULT_CONFIG);
     
+    // Ensure backward compatibility with older versions
+    if (USER_CONFIG.enableTooltips === undefined) {
+        USER_CONFIG.enableTooltips = true;
+        GM_setValue('commitLabelsConfig', USER_CONFIG);
+    }
+    
     // Ensure labelsVisible exists in config (for backward compatibility)
     if (USER_CONFIG.labelsVisible === undefined) {
         USER_CONFIG.labelsVisible = true;
+        GM_setValue('commitLabelsConfig', USER_CONFIG);
+    }
+    
+    // Make sure all commit types have descriptions (for backward compatibility)
+    let configUpdated = false;
+    Object.entries(USER_CONFIG.commitTypes).forEach(([type, config]) => {
+        if (!config.description && DEFAULT_CONFIG.commitTypes[type]) {
+            USER_CONFIG.commitTypes[type].description = DEFAULT_CONFIG.commitTypes[type].description;
+            configUpdated = true;
+        }
+    });
+    if (configUpdated) {
         GM_setValue('commitLabelsConfig', USER_CONFIG);
     }
 
@@ -313,18 +331,98 @@ SOFTWARE.
         prefixDiv.appendChild(prefixLabel);
         configWindow.appendChild(prefixDiv);
 
-        // Add toggle for tooltips
+        // Add toggle for tooltips with preview
         const tooltipDiv = document.createElement('div');
         tooltipDiv.style.marginBottom = '20px';
+        
+        const tooltipHeader = document.createElement('div');
+        tooltipHeader.style.display = 'flex';
+        tooltipHeader.style.alignItems = 'center';
+        tooltipHeader.style.marginBottom = '5px';
+        
         const tooltipCheckbox = document.createElement('input');
         tooltipCheckbox.type = 'checkbox';
         tooltipCheckbox.checked = USER_CONFIG.enableTooltips;
         tooltipCheckbox.id = 'enable-tooltips';
+        
         const tooltipLabel = document.createElement('label');
         tooltipLabel.htmlFor = 'enable-tooltips';
         tooltipLabel.textContent = ' Enable tooltips with extended descriptions';
-        tooltipDiv.appendChild(tooltipCheckbox);
-        tooltipDiv.appendChild(tooltipLabel);
+        tooltipLabel.style.marginRight = '15px';
+        
+        // Add tooltip preview
+        const previewLabel = document.createElement('span');
+        previewLabel.textContent = 'Preview: ';
+        previewLabel.style.marginRight = '5px';
+        
+        const previewExample = document.createElement('span');
+        previewExample.className = 'tooltip-preview-label';
+        previewExample.innerHTML = '✨ <span>Feature</span>';
+        previewExample.dataset.description = 'New user features (not for new files without user features)';
+        previewExample.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
+            padding: 0 10px;
+            border-radius: 20px;
+            background: rgba(35, 134, 54, 0.2);
+            color: #7ee787;
+            cursor: help;
+        `;
+        
+        tooltipHeader.appendChild(tooltipCheckbox);
+        tooltipHeader.appendChild(tooltipLabel);
+        tooltipHeader.appendChild(previewLabel);
+        tooltipHeader.appendChild(previewExample);
+        
+        // Create custom preview tooltip
+        previewExample.addEventListener('mouseenter', (e) => {
+            if (!tooltipCheckbox.checked) return;
+            
+            const tooltipPreview = document.createElement('div');
+            tooltipPreview.className = 'tooltip-preview';
+            tooltipPreview.textContent = previewExample.dataset.description;
+            
+            const rect = e.target.getBoundingClientRect();
+            
+            tooltipPreview.style.cssText = `
+                position: fixed;
+                top: ${rect.bottom + 5}px;
+                left: ${rect.left}px;
+                max-width: 300px;
+                padding: 8px 12px;
+                color: #e6edf3;
+                text-align: center;
+                background-color: #161b22;
+                border-radius: 6px;
+                border: 1px solid #30363d;
+                box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+                font-size: 12px;
+                z-index: 10000;
+                pointer-events: none;
+            `;
+            
+            document.body.appendChild(tooltipPreview);
+        });
+        
+        previewExample.addEventListener('mouseleave', () => {
+            const tooltipPreview = document.querySelector('.tooltip-preview');
+            if (tooltipPreview) {
+                document.body.removeChild(tooltipPreview);
+            }
+        });
+        
+        tooltipDiv.appendChild(tooltipHeader);
+        
+        // Add explanation text
+        const tooltipExplanation = document.createElement('div');
+        tooltipExplanation.textContent = 'Tooltips show detailed descriptions when hovering over commit labels.';
+        tooltipExplanation.style.color = '#8b949e';
+        tooltipExplanation.style.fontSize = '12px';
+        tooltipExplanation.style.marginTop = '5px';
+        
+        tooltipDiv.appendChild(tooltipExplanation);
         configWindow.insertBefore(tooltipDiv, prefixDiv.nextSibling);
 
         // Commit Types Configuration
@@ -914,21 +1012,91 @@ SOFTWARE.
                                 .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
                                 .join(';');
 
-                            // Add tooltip if enabled
+                            // Enhanced tooltip
                             if (USER_CONFIG.enableTooltips && USER_CONFIG.commitTypes[type].description) {
-                                label.title = USER_CONFIG.commitTypes[type].description;
+                                // Store description in data attribute instead of title to avoid double tooltips
+                                label.dataset.description = USER_CONFIG.commitTypes[type].description;
+                                label.setAttribute('aria-label', USER_CONFIG.commitTypes[type].description);
+                                
+                                // Add tooltip indicator
+                                label.style.cursor = 'help';
+                                
+                                // For better accessibility
+                                label.setAttribute('role', 'tooltip');
+                                
+                                // Create a custom tooltip implementation if needed
+                                label.addEventListener('mouseenter', (e) => {
+                                    // Check if we already have a custom tooltip showing
+                                    if (document.querySelector('.commit-label-tooltip')) {
+                                        return;
+                                    }
+                                    
+                                    label.style.transform = 'translateY(-1px)';
+                                    label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                                    
+                                    // Force show tooltip by creating a custom one
+                                    if (label.dataset.description) {
+                                        const tooltip = document.createElement('div');
+                                        tooltip.className = 'commit-label-tooltip';
+                                        tooltip.textContent = label.dataset.description;
+                                        
+                                        // Calculate position relative to viewport
+                                        const rect = e.target.getBoundingClientRect();
+                                        const top = rect.bottom + 5;
+                                        const left = rect.left;
+                                        
+                                        tooltip.style.cssText = `
+                                            position: fixed;
+                                            top: ${top}px;
+                                            left: ${left}px;
+                                            max-width: 300px;
+                                            padding: 8px 12px;
+                                            color: #e6edf3;
+                                            text-align: center;
+                                            background-color: #161b22;
+                                            border-radius: 6px;
+                                            border: 1px solid #30363d;
+                                            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+                                            font-size: 12px;
+                                            z-index: 1000;
+                                            pointer-events: none;
+                                        `;
+                                        document.body.appendChild(tooltip);
+                                        
+                                        // Adjust position if tooltip goes off-screen
+                                        const tooltipRect = tooltip.getBoundingClientRect();
+                                        if (tooltipRect.right > window.innerWidth) {
+                                            tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+                                        }
+                                    }
+                                });
+
+                                label.addEventListener('mouseleave', () => {
+                                    label.style.transform = 'translateY(0)';
+                                    label.style.boxShadow = styles.boxShadow;
+                                    
+                                    // Remove custom tooltip if it exists
+                                    const tooltip = document.querySelector('.commit-label-tooltip');
+                                    if (tooltip) {
+                                        document.body.removeChild(tooltip);
+                                    }
+                                });
+                            } else {
+                                // Normal hover effect if tooltips are disabled
+                                if (USER_CONFIG.commitTypes[type].description) {
+                                    label.title = USER_CONFIG.commitTypes[type].description;
+                                }
+                                
+                                label.addEventListener('mouseenter', () => {
+                                    label.style.transform = 'translateY(-1px)';
+                                    label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                                });
+
+                                label.addEventListener('mouseleave', () => {
+                                    label.style.transform = 'translateY(0)';
+                                    label.style.boxShadow = styles.boxShadow;
+                                });
                             }
-
-                            // Add hover effect
-                            label.addEventListener('mouseenter', () => {
-                                label.style.transform = 'translateY(-1px)';
-                                label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-                            });
-
-                            label.addEventListener('mouseleave', () => {
-                                label.style.transform = 'translateY(0)';
-                                label.style.boxShadow = styles.boxShadow;
-                            });
 
                             const emoji = document.createElement('span');
                             emoji.style.marginRight = '4px';
