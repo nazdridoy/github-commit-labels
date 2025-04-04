@@ -16,7 +16,7 @@ A userscript that enhances GitHub commits by adding beautiful labels for convent
 - 🎯 Works on commit history and single commit pages
 
 
-![2025-04-04_06-37-02](https://github.com/user-attachments/assets/5b9a74ef-cac6-4bd5-9479-e482829204be)
+![preview1](https://raw.githubusercontent.com/nazdridoy/github-commit-labels/main/previews/preview1.png)
 
 
 
@@ -79,7 +79,7 @@ Default commit types and their aliases:
    - Export/Import your configuration
   
 
-![image](https://github.com/user-attachments/assets/02c68e8e-b1b7-4a0f-a537-cf9a043b670e)
+![preview2](https://raw.githubusercontent.com/nazdridoy/github-commit-labels/main/previews/preview2.png)
 
 
 
@@ -111,4 +111,3 @@ Created by [nazdridoy](https://github.com/nazdridoy)
 If you encounter any issues or have suggestions:
 - [Open an issue](https://github.com/nazdridoy/github-commit-labels/issues)
 - [Submit a pull request](https://github.com/nazdridoy/github-commit-labels/pulls)
-
