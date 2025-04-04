@@ -62,7 +62,7 @@ Default commit types and their aliases:
 
 2. Install the script:
    - [Install from Greasy Fork](https://greasyfork.org/en/scripts/526153-github-commit-labels)
-   - Or create a new script in your userscript manager and copy the contents of `github-commit-labels.js`
+   - Or create a new script in your userscript manager and copy the contents of [`github-commit-labels.js`](https://github.com/nazdridoy/github-commit-labels/blob/main/github-commit-labels.js)
 
 ## Configuration
 
@@ -111,3 +111,4 @@ Created by [nazdridoy](https://github.com/nazdridoy)
 If you encounter any issues or have suggestions:
 - [Open an issue](https://github.com/nazdridoy/github-commit-labels/issues)
 - [Submit a pull request](https://github.com/nazdridoy/github-commit-labels/pulls)
+
