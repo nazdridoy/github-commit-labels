@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.2.2
+// @version      1.3.0
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -157,6 +157,7 @@ SOFTWARE.
         removePrefix: true,
         enableTooltips: true,
         labelsVisible: true,
+        showScope: false,
         labelStyle: {
             fontSize: '14px',
             fontWeight: '500',
@@ -603,6 +604,21 @@ SOFTWARE.
         
         configWindow.insertBefore(floatingBtnDiv, tooltipDiv.nextSibling);
 
+        // After the tooltipDiv and before the floatingBtnDiv in the createConfigWindow function:
+        const scopeDiv = document.createElement('div');
+        scopeDiv.style.marginBottom = '20px';
+        const scopeCheckbox = document.createElement('input');
+        scopeCheckbox.type = 'checkbox';
+        scopeCheckbox.checked = USER_CONFIG.showScope;
+        scopeCheckbox.id = 'show-scope';
+        scopeCheckbox.style.marginRight = '5px';
+        const scopeLabel = document.createElement('label');
+        scopeLabel.htmlFor = 'show-scope';
+        scopeLabel.textContent = 'Show commit scope in labels (e.g., "feat(api): message" shows "api" in label)';
+        scopeDiv.appendChild(scopeCheckbox);
+        scopeDiv.appendChild(scopeLabel);
+        configWindow.insertBefore(scopeDiv, floatingBtnDiv.nextSibling);
+
         // Commit Types Configuration
         const typesContainer = document.createElement('div');
         typesContainer.style.marginBottom = '20px';
@@ -938,6 +954,7 @@ SOFTWARE.
             newConfig.removePrefix = prefixCheckbox.checked;
             newConfig.enableTooltips = tooltipCheckbox.checked;
             newConfig.showFloatingButton = floatingBtnCheckbox.checked;
+            newConfig.showScope = scopeCheckbox.checked;
             newConfig.commitTypes = {};
 
             typesContainer.querySelectorAll('input, select').forEach(input => {
@@ -1209,11 +1226,12 @@ SOFTWARE.
             for (let i = startIndex; i < endIndex; i++) {
                 const message = commitMessagesArray[i];
                 const text = message.textContent.trim();
-                const match = text.match(/^(\w+)(?:\([\w-]+\))?:\s*(.*)/);
+                const match = text.match(/^(\w+)(?:\(([\w-]+)\))?:\s*(.*)/);
 
                 if (match) {
                     const type = match[1].toLowerCase();
-                    const restOfMessage = match[2];
+                    const scope = match[2] || '';
+                    const restOfMessage = match[3];
 
                     if (USER_CONFIG.commitTypes[type]) {
                         // Only add label if it hasn't been added yet
@@ -1221,6 +1239,7 @@ SOFTWARE.
                             const label = document.createElement('span');
                             label.className = 'commit-label';
                             label.dataset.commitType = type;
+                            label.dataset.commitScope = scope;
                             
                             const color = COLORS[USER_CONFIG.commitTypes[type].color];
                             
@@ -1239,8 +1258,12 @@ SOFTWARE.
                             // Enhanced tooltip
                             if (USER_CONFIG.enableTooltips && USER_CONFIG.commitTypes[type].description) {
                                 // Store description in data attribute instead of title to avoid double tooltips
-                                label.dataset.description = USER_CONFIG.commitTypes[type].description;
-                                label.setAttribute('aria-label', USER_CONFIG.commitTypes[type].description);
+                                const description = USER_CONFIG.commitTypes[type].description;
+                                const tooltipText = scope ? 
+                                    `${description} (Scope: ${scope})` : 
+                                    description;
+                                label.dataset.description = tooltipText;
+                                label.setAttribute('aria-label', tooltipText);
                                 
                                 // Add tooltip indicator
                                 label.style.cursor = 'help';
@@ -1338,6 +1361,17 @@ SOFTWARE.
                             // Update the commit message text to remove the type prefix if enabled
                             if (USER_CONFIG.removePrefix) {
                                 message.textContent = restOfMessage;
+                            }
+
+                            // Optionally display scope in the label
+                            if (scope && USER_CONFIG.showScope) {
+                                const scopeSpan = document.createElement('span');
+                                scopeSpan.className = 'commit-scope';
+                                scopeSpan.textContent = `(${scope})`;
+                                scopeSpan.style.marginLeft = '2px';
+                                scopeSpan.style.opacity = '0.8';
+                                scopeSpan.style.fontSize = '12px';
+                                labelText.appendChild(scopeSpan);
                             }
                         }
                     }
