@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.4.0
+// @version      1.5.0
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -158,6 +158,7 @@ SOFTWARE.
         enableTooltips: true,
         labelsVisible: true,
         showScope: false,
+        debugMode: false,  // Add debug mode setting
         labelStyle: {
             fontSize: '14px',
             fontWeight: '500',
@@ -619,6 +620,21 @@ SOFTWARE.
         scopeDiv.appendChild(scopeLabel);
         configWindow.insertBefore(scopeDiv, floatingBtnDiv.nextSibling);
 
+        // Add debug mode toggle
+        const debugDiv = document.createElement('div');
+        debugDiv.style.marginBottom = '20px';
+        const debugCheckbox = document.createElement('input');
+        debugCheckbox.type = 'checkbox';
+        debugCheckbox.checked = USER_CONFIG.debugMode;
+        debugCheckbox.id = 'debug-mode';
+        debugCheckbox.style.marginRight = '5px';
+        const debugLabel = document.createElement('label');
+        debugLabel.htmlFor = 'debug-mode';
+        debugLabel.textContent = 'Enable debug mode (shows detailed logs in console)';
+        debugDiv.appendChild(debugCheckbox);
+        debugDiv.appendChild(debugLabel);
+        configWindow.insertBefore(debugDiv, prefixDiv.nextSibling);
+
         // Commit Types Configuration
         const typesContainer = document.createElement('div');
         typesContainer.style.marginBottom = '20px';
@@ -955,6 +971,7 @@ SOFTWARE.
             newConfig.enableTooltips = tooltipCheckbox.checked;
             newConfig.showFloatingButton = floatingBtnCheckbox.checked;
             newConfig.showScope = scopeCheckbox.checked;
+            newConfig.debugMode = debugCheckbox.checked;  // Add debug mode
             newConfig.commitTypes = {};
 
             typesContainer.querySelectorAll('input, select').forEach(input => {
@@ -1200,12 +1217,26 @@ SOFTWARE.
         }
     }
 
+    // Debug logging function
+    function debugLog(message, data = null) {
+        if (USER_CONFIG.debugMode) {
+            const timestamp = new Date().toISOString();
+            const logMessage = `[GitHub Commit Labels Debug] [${timestamp}] ${message}`;
+            console.log(logMessage);
+            if (data) {
+                console.log('Data:', data);
+            }
+        }
+    }
+
     // Helper function to safely query elements
     function safeQuerySelector(selector) {
         try {
-            return document.querySelectorAll(selector);
+            const elements = document.querySelectorAll(selector);
+            debugLog(`Query selector "${selector}" found ${elements.length} elements`);
+            return elements;
         } catch (error) {
-            console.warn('[GitHub Commit Labels] Selector error:', error);
+            debugLog(`Selector error for "${selector}":`, error);
             return [];
         }
     }
@@ -1225,14 +1256,20 @@ SOFTWARE.
 
     // Main function to add labels to commits
     function addCommitLabels() {
+        debugLog('Starting addCommitLabels');
+        
         // Only proceed if we're on a commit page
-        if (!isCommitPage()) return;
+        if (!isCommitPage()) {
+            debugLog('Not on a commit page, exiting');
+            return;
+        }
 
-        // Update theme colors
+        debugLog('Updating theme colors');
         updateThemeColors();
         
         // Create toggle button if it doesn't exist and is enabled
         if (USER_CONFIG.showFloatingButton !== false) {
+            debugLog('Creating label toggle button');
             createLabelToggle();
         }
 
@@ -1243,14 +1280,17 @@ SOFTWARE.
             '.markdown-title a[data-pjax="true"]'                       // Legacy
         ];
 
+        debugLog('Trying selectors:', selectors);
         let commitMessages = [];
         for (const selector of selectors) {
             commitMessages = safeQuerySelector(selector);
             if (commitMessages.length > 0) {
-                console.log('[GitHub Commit Labels] Using selector:', selector);
+                debugLog(`Using selector: ${selector}`);
                 break;
             }
         }
+
+        debugLog(`Found ${commitMessages.length} commit messages to process`);
 
         // Debounce and batch process for performance improvement
         let processedCount = 0;
@@ -1258,22 +1298,35 @@ SOFTWARE.
         const commitMessagesArray = Array.from(commitMessages);
         
         const processCommitBatch = (startIndex) => {
+            debugLog(`Processing batch starting at index ${startIndex}`);
             const endIndex = Math.min(startIndex + batchSize, commitMessagesArray.length);
             
             for (let i = startIndex; i < endIndex; i++) {
                 try {
                     const message = commitMessagesArray[i];
                     const text = message.textContent.trim();
+                    debugLog(`Processing commit message: ${text}`);
+                    
+                    // Skip if this commit already has a label
+                    if (message.parentElement.querySelector('.commit-label')) {
+                        debugLog('Commit already has a label, skipping');
+                        continue;
+                    }
+
                     const match = text.match(/^(\w+)(?:\(([\w-]+)\))?:\s*(.*)/);
+                    debugLog('Commit message match result:', match);
 
                     if (match) {
                         const type = match[1].toLowerCase();
                         const scope = match[2] || '';
                         const restOfMessage = match[3];
+                        debugLog(`Extracted: type=${type}, scope=${scope}, message=${restOfMessage}`);
 
                         if (USER_CONFIG.commitTypes[type]) {
+                            debugLog(`Found matching commit type: ${type}`);
                             // Only add label if it hasn't been added yet
                             if (!message.parentElement.querySelector('.commit-label')) {
+                                debugLog('Creating new label');
                                 const label = document.createElement('span');
                                 label.className = 'commit-label';
                                 label.dataset.commitType = type;
@@ -1411,32 +1464,54 @@ SOFTWARE.
                                     scopeSpan.style.fontSize = '12px';
                                     labelText.appendChild(scopeSpan);
                                 }
+                            } else {
+                                debugLog('Label already exists, skipping');
                             }
+                        } else {
+                            debugLog(`No matching commit type found for: ${type}`);
+                        }
+                    } else {
+                        // Only log non-conventional commits if they don't have a label
+                        if (!message.parentElement.querySelector('.commit-label')) {
+                            debugLog('Commit message does not match conventional commit format and has no label');
+                        } else {
+                            debugLog('Skipping already processed commit');
                         }
                     }
                 } catch (error) {
-                    console.warn('[GitHub Commit Labels] Error processing commit:', error);
+                    debugLog('Error processing commit:', error);
                 }
             }
             
             // Process next batch if needed
             processedCount += (endIndex - startIndex);
+            debugLog(`Processed ${processedCount} of ${commitMessagesArray.length} commits`);
+            
             if (processedCount < commitMessagesArray.length) {
+                debugLog('Scheduling next batch');
                 setTimeout(() => processCommitBatch(endIndex), 0);
+            } else {
+                debugLog('Finished processing all commits');
             }
         };
         
         // Start processing first batch
         if (commitMessagesArray.length > 0) {
+            debugLog('Starting first batch processing');
             processCommitBatch(0);
+        } else {
+            debugLog('No commit messages found to process');
         }
     }
 
     // Set up MutationObserver to watch for DOM changes
     function setupMutationObserver() {
+        debugLog('Setting up MutationObserver');
         const observer = new MutationObserver(debounce((mutations) => {
+            debugLog('DOM changes detected:', mutations);
             for (const mutation of mutations) {
                 if (mutation.addedNodes.length) {
+                    debugLog('New nodes added, triggering addCommitLabels');
                     addCommitLabels();
                 }
             }
@@ -1448,11 +1523,13 @@ SOFTWARE.
             subtree: true
         });
 
+        debugLog('MutationObserver setup complete');
         return observer;
     }
 
     // Initialize the script
     function initialize() {
+        debugLog('Initializing GitHub Commit Labels');
         // Initial run
         addCommitLabels();
 
@@ -1461,6 +1538,7 @@ SOFTWARE.
 
         // Clean up on page unload
         window.addEventListener('unload', () => {
+            debugLog('Cleaning up on page unload');
             observer.disconnect();
         });
     }
