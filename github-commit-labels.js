@@ -1200,6 +1200,30 @@ SOFTWARE.
         }
     }
 
+    // Helper function to safely query elements
+    function safeQuerySelector(selector) {
+        try {
+            return document.querySelectorAll(selector);
+        } catch (error) {
+            console.warn('[GitHub Commit Labels] Selector error:', error);
+            return [];
+        }
+    }
+
+    // Debounce function to limit how often a function can be called
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Main function to add labels to commits
     function addCommitLabels() {
         // Only proceed if we're on a commit page
         if (!isCommitPage()) return;
@@ -1212,8 +1236,21 @@ SOFTWARE.
             createLabelToggle();
         }
 
-        // More resilient selector that matches GitHub's commit message structure
-        const commitMessages = document.querySelectorAll('li[data-testid="commit-row-item"] h4 a[data-pjax="true"]');
+        // Try multiple selectors in order of reliability
+        const selectors = [
+            'li[data-testid="commit-row-item"] h4 a[data-pjax="true"]', // Most reliable
+            '.Title-module__heading--upUxW a[data-pjax="true"]',        // Backup
+            '.markdown-title a[data-pjax="true"]'                       // Legacy
+        ];
+
+        let commitMessages = [];
+        for (const selector of selectors) {
+            commitMessages = safeQuerySelector(selector);
+            if (commitMessages.length > 0) {
+                console.log('[GitHub Commit Labels] Using selector:', selector);
+                break;
+            }
+        }
 
         // Debounce and batch process for performance improvement
         let processedCount = 0;
@@ -1224,157 +1261,161 @@ SOFTWARE.
             const endIndex = Math.min(startIndex + batchSize, commitMessagesArray.length);
             
             for (let i = startIndex; i < endIndex; i++) {
-                const message = commitMessagesArray[i];
-                const text = message.textContent.trim();
-                const match = text.match(/^(\w+)(?:\(([\w-]+)\))?:\s*(.*)/);
+                try {
+                    const message = commitMessagesArray[i];
+                    const text = message.textContent.trim();
+                    const match = text.match(/^(\w+)(?:\(([\w-]+)\))?:\s*(.*)/);
 
-                if (match) {
-                    const type = match[1].toLowerCase();
-                    const scope = match[2] || '';
-                    const restOfMessage = match[3];
+                    if (match) {
+                        const type = match[1].toLowerCase();
+                        const scope = match[2] || '';
+                        const restOfMessage = match[3];
 
-                    if (USER_CONFIG.commitTypes[type]) {
-                        // Only add label if it hasn't been added yet
-                        if (!message.parentElement.querySelector('.commit-label')) {
-                            const label = document.createElement('span');
-                            label.className = 'commit-label';
-                            label.dataset.commitType = type;
-                            label.dataset.commitScope = scope;
-                            
-                            const color = COLORS[USER_CONFIG.commitTypes[type].color];
-                            
-                            // Apply styles
-                            const styles = {
-                                ...USER_CONFIG.labelStyle,
-                                backgroundColor: color.bg,
-                                color: color.text,
-                                display: USER_CONFIG.labelsVisible ? 'inline-flex' : 'none'
-                            };
-
-                            label.style.cssText = Object.entries(styles)
-                                .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
-                                .join(';');
-
-                            // Enhanced tooltip
-                            if (USER_CONFIG.enableTooltips && USER_CONFIG.commitTypes[type].description) {
-                                // Store description in data attribute instead of title to avoid double tooltips
-                                const description = USER_CONFIG.commitTypes[type].description;
-                                const tooltipText = scope ? 
-                                    `${description} (Scope: ${scope})` : 
-                                    description;
-                                label.dataset.description = tooltipText;
-                                label.setAttribute('aria-label', tooltipText);
+                        if (USER_CONFIG.commitTypes[type]) {
+                            // Only add label if it hasn't been added yet
+                            if (!message.parentElement.querySelector('.commit-label')) {
+                                const label = document.createElement('span');
+                                label.className = 'commit-label';
+                                label.dataset.commitType = type;
+                                label.dataset.commitScope = scope;
                                 
-                                // Add tooltip indicator
-                                label.style.cursor = 'help';
+                                const color = COLORS[USER_CONFIG.commitTypes[type].color];
                                 
-                                // For better accessibility
-                                label.setAttribute('role', 'tooltip');
-                                
-                                // Create a custom tooltip implementation if needed
-                                label.addEventListener('mouseenter', (e) => {
-                                    // Check if we already have a custom tooltip showing
-                                    if (document.querySelector('.commit-label-tooltip')) {
-                                        return;
-                                    }
+                                // Apply styles
+                                const styles = {
+                                    ...USER_CONFIG.labelStyle,
+                                    backgroundColor: color.bg,
+                                    color: color.text,
+                                    display: USER_CONFIG.labelsVisible ? 'inline-flex' : 'none'
+                                };
+
+                                label.style.cssText = Object.entries(styles)
+                                    .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
+                                    .join(';');
+
+                                // Enhanced tooltip
+                                if (USER_CONFIG.enableTooltips && USER_CONFIG.commitTypes[type].description) {
+                                    // Store description in data attribute instead of title to avoid double tooltips
+                                    const description = USER_CONFIG.commitTypes[type].description;
+                                    const tooltipText = scope ? 
+                                        `${description} (Scope: ${scope})` : 
+                                        description;
+                                    label.dataset.description = tooltipText;
+                                    label.setAttribute('aria-label', tooltipText);
                                     
-                                    label.style.transform = 'translateY(-1px)';
-                                    label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                                    // Add tooltip indicator
+                                    label.style.cursor = 'help';
                                     
-                                    // Force show tooltip by creating a custom one
-                                    if (label.dataset.description) {
-                                        const tooltip = document.createElement('div');
-                                        tooltip.className = 'commit-label-tooltip';
-                                        tooltip.textContent = label.dataset.description;
-                                        
-                                        // Calculate position relative to viewport
-                                        const rect = e.target.getBoundingClientRect();
-                                        const top = rect.bottom + 5;
-                                        const left = rect.left;
-                                        
-                                        tooltip.style.cssText = `
-                                            position: fixed;
-                                            top: ${top}px;
-                                            left: ${left}px;
-                                            max-width: 300px;
-                                            padding: 8px 12px;
-                                            color: #e6edf3;
-                                            text-align: center;
-                                            background-color: #161b22;
-                                            border-radius: 6px;
-                                            border: 1px solid #30363d;
-                                            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
-                                            font-size: 12px;
-                                            z-index: 1000;
-                                            pointer-events: none;
-                                        `;
-                                        document.body.appendChild(tooltip);
-                                        
-                                        // Adjust position if tooltip goes off-screen
-                                        const tooltipRect = tooltip.getBoundingClientRect();
-                                        if (tooltipRect.right > window.innerWidth) {
-                                            tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+                                    // For better accessibility
+                                    label.setAttribute('role', 'tooltip');
+                                    
+                                    // Create a custom tooltip implementation if needed
+                                    label.addEventListener('mouseenter', (e) => {
+                                        // Check if we already have a custom tooltip showing
+                                        if (document.querySelector('.commit-label-tooltip')) {
+                                            return;
                                         }
-                                    }
-                                });
+                                        
+                                        label.style.transform = 'translateY(-1px)';
+                                        label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                                        
+                                        // Force show tooltip by creating a custom one
+                                        if (label.dataset.description) {
+                                            const tooltip = document.createElement('div');
+                                            tooltip.className = 'commit-label-tooltip';
+                                            tooltip.textContent = label.dataset.description;
+                                            
+                                            // Calculate position relative to viewport
+                                            const rect = e.target.getBoundingClientRect();
+                                            const top = rect.bottom + 5;
+                                            const left = rect.left;
+                                            
+                                            tooltip.style.cssText = `
+                                                position: fixed;
+                                                top: ${top}px;
+                                                left: ${left}px;
+                                                max-width: 300px;
+                                                padding: 8px 12px;
+                                                color: #e6edf3;
+                                                text-align: center;
+                                                background-color: #161b22;
+                                                border-radius: 6px;
+                                                border: 1px solid #30363d;
+                                                box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+                                                font-size: 12px;
+                                                z-index: 1000;
+                                                pointer-events: none;
+                                            `;
+                                            document.body.appendChild(tooltip);
+                                            
+                                            // Adjust position if tooltip goes off-screen
+                                            const tooltipRect = tooltip.getBoundingClientRect();
+                                            if (tooltipRect.right > window.innerWidth) {
+                                                tooltip.style.left = `${window.innerWidth - tooltipRect.width - 10}px`;
+                                            }
+                                        }
+                                    });
 
-                                label.addEventListener('mouseleave', () => {
-                                    label.style.transform = 'translateY(0)';
-                                    label.style.boxShadow = styles.boxShadow;
+                                    label.addEventListener('mouseleave', () => {
+                                        label.style.transform = 'translateY(0)';
+                                        label.style.boxShadow = styles.boxShadow;
+                                        
+                                        // Remove custom tooltip if it exists
+                                        const tooltip = document.querySelector('.commit-label-tooltip');
+                                        if (tooltip) {
+                                            document.body.removeChild(tooltip);
+                                        }
+                                    });
+                                } else {
+                                    // Normal hover effect if tooltips are disabled
+                                    if (USER_CONFIG.commitTypes[type].description) {
+                                        label.title = USER_CONFIG.commitTypes[type].description;
+                                    }
                                     
-                                    // Remove custom tooltip if it exists
-                                    const tooltip = document.querySelector('.commit-label-tooltip');
-                                    if (tooltip) {
-                                        document.body.removeChild(tooltip);
-                                    }
-                                });
-                            } else {
-                                // Normal hover effect if tooltips are disabled
-                                if (USER_CONFIG.commitTypes[type].description) {
-                                    label.title = USER_CONFIG.commitTypes[type].description;
+                                    label.addEventListener('mouseenter', () => {
+                                        label.style.transform = 'translateY(-1px)';
+                                        label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+                                    });
+
+                                    label.addEventListener('mouseleave', () => {
+                                        label.style.transform = 'translateY(0)';
+                                        label.style.boxShadow = styles.boxShadow;
+                                    });
                                 }
-                                
-                                label.addEventListener('mouseenter', () => {
-                                    label.style.transform = 'translateY(-1px)';
-                                    label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-                                });
 
-                                label.addEventListener('mouseleave', () => {
-                                    label.style.transform = 'translateY(0)';
-                                    label.style.boxShadow = styles.boxShadow;
-                                });
-                            }
+                                const emoji = document.createElement('span');
+                                emoji.style.marginRight = '4px';
+                                emoji.style.fontSize = '14px';
+                                emoji.style.lineHeight = '1';
+                                emoji.textContent = USER_CONFIG.commitTypes[type].emoji;
 
-                            const emoji = document.createElement('span');
-                            emoji.style.marginRight = '4px';
-                            emoji.style.fontSize = '14px';
-                            emoji.style.lineHeight = '1';
-                            emoji.textContent = USER_CONFIG.commitTypes[type].emoji;
+                                const labelText = document.createElement('span');
+                                labelText.textContent = USER_CONFIG.commitTypes[type].label;
 
-                            const labelText = document.createElement('span');
-                            labelText.textContent = USER_CONFIG.commitTypes[type].label;
+                                label.appendChild(emoji);
+                                label.appendChild(labelText);
+                                message.parentElement.insertBefore(label, message);
 
-                            label.appendChild(emoji);
-                            label.appendChild(labelText);
-                            message.parentElement.insertBefore(label, message);
+                                // Update the commit message text to remove the type prefix if enabled
+                                if (USER_CONFIG.removePrefix) {
+                                    message.textContent = restOfMessage;
+                                }
 
-                            // Update the commit message text to remove the type prefix if enabled
-                            if (USER_CONFIG.removePrefix) {
-                                message.textContent = restOfMessage;
-                            }
-
-                            // Optionally display scope in the label
-                            if (scope && USER_CONFIG.showScope) {
-                                const scopeSpan = document.createElement('span');
-                                scopeSpan.className = 'commit-scope';
-                                scopeSpan.textContent = `(${scope})`;
-                                scopeSpan.style.marginLeft = '2px';
-                                scopeSpan.style.opacity = '0.8';
-                                scopeSpan.style.fontSize = '12px';
-                                labelText.appendChild(scopeSpan);
+                                // Optionally display scope in the label
+                                if (scope && USER_CONFIG.showScope) {
+                                    const scopeSpan = document.createElement('span');
+                                    scopeSpan.className = 'commit-scope';
+                                    scopeSpan.textContent = `(${scope})`;
+                                    scopeSpan.style.marginLeft = '2px';
+                                    scopeSpan.style.opacity = '0.8';
+                                    scopeSpan.style.fontSize = '12px';
+                                    labelText.appendChild(scopeSpan);
+                                }
                             }
                         }
                     }
+                } catch (error) {
+                    console.warn('[GitHub Commit Labels] Error processing commit:', error);
                 }
             }
             
@@ -1391,43 +1432,44 @@ SOFTWARE.
         }
     }
 
-    // Only set up observers if we're on a commit page
-    function initialize() {
-        // Initial run
-        addCommitLabels();
-
-        // Watch for DOM changes
-        const observer = new MutationObserver((mutations) => {
+    // Set up MutationObserver to watch for DOM changes
+    function setupMutationObserver() {
+        const observer = new MutationObserver(debounce((mutations) => {
             for (const mutation of mutations) {
                 if (mutation.addedNodes.length) {
                     addCommitLabels();
                 }
             }
-        });
+        }, 100));
 
         // Start observing the document with the configured parameters
-        observer.observe(document.body, { childList: true, subtree: true });
-        
-        // Watch for theme changes
-        const themeObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.attributeName === 'data-color-mode' || 
-                    mutation.attributeName === 'data-dark-theme' || 
-                    mutation.attributeName === 'data-light-theme') {
-                    updateThemeColors();
-                }
-            }
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
         });
-        
-        // Start observing the html element for theme changes
-        themeObserver.observe(document.documentElement, { attributes: true });
+
+        return observer;
+    }
+
+    // Initialize the script
+    function initialize() {
+        // Initial run
+        addCommitLabels();
+
+        // Set up mutation observer
+        const observer = setupMutationObserver();
+
+        // Clean up on page unload
+        window.addEventListener('unload', () => {
+            observer.disconnect();
+        });
     }
 
     // Initialize on page load
     initialize();
 
     // Handle GitHub's client-side navigation
-    const navigationObserver = new MutationObserver((mutations) => {
+    const navigationObserver = new MutationObserver(debounce((mutations) => {
         for (const mutation of mutations) {
             if (mutation.type === 'childList') {
                 // Check if we're on a commit page after navigation
@@ -1437,7 +1479,7 @@ SOFTWARE.
                 }
             }
         }
-    });
+    }, 100));
 
     // Observe changes to the main content area
     navigationObserver.observe(document.body, {
@@ -1446,16 +1488,16 @@ SOFTWARE.
     });
 
     // Listen for popstate events (browser back/forward navigation)
-    window.addEventListener('popstate', () => {
+    window.addEventListener('popstate', debounce(() => {
         if (isCommitPage()) {
             setTimeout(addCommitLabels, 100);
         }
-    });
+    }, 100));
 
     // Listen for GitHub's custom navigation event
-    document.addEventListener('turbo:render', () => {
+    document.addEventListener('turbo:render', debounce(() => {
         if (isCommitPage()) {
             setTimeout(addCommitLabels, 100);
         }
-    });
+    }, 100));
 })();
