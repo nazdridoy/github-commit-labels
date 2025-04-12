@@ -1212,8 +1212,8 @@ SOFTWARE.
             createLabelToggle();
         }
 
-        // Update selector to match GitHub's current DOM structure
-        const commitMessages = document.querySelectorAll('.markdown-title a[data-pjax="true"]');
+        // Updated selector to match GitHub's new UI structure
+        const commitMessages = document.querySelectorAll('.Title-module__heading--upUxW a[data-pjax="true"]');
 
         // Debounce and batch process for performance improvement
         let processedCount = 0;
