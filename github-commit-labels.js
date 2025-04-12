@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.3.0
+// @version      1.4.0
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -1212,8 +1212,8 @@ SOFTWARE.
             createLabelToggle();
         }
 
-        // Updated selector to match GitHub's new UI structure
-        const commitMessages = document.querySelectorAll('.Title-module__heading--upUxW a[data-pjax="true"]');
+        // More resilient selector that matches GitHub's commit message structure
+        const commitMessages = document.querySelectorAll('li[data-testid="commit-row-item"] h4 a[data-pjax="true"]');
 
         // Debounce and batch process for performance improvement
         let processedCount = 0;
