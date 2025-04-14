@@ -53,6 +53,32 @@ Default commit types and their aliases:
 - **Initial Setup**: `init`
 - **You Can ADD More**
   
+## Example Commit Formats
+
+Here are some examples of how to format your commits to get the labels:
+
+```
+# Basic format
+feat: add new login functionality
+fix: resolve authentication bug
+docs: update API documentation
+
+# With scope
+feat(auth): implement OAuth2 login
+fix(api): handle rate limiting errors
+docs(readme): add installation guide
+style(button): improve hover effects
+refactor(service): clean up user service code
+perf(db): optimize database queries
+test(auth): add unit tests for auth service
+```
+
+The script will automatically detect the commit type from the first word of your commit message and add the appropriate label. Make sure to:
+1. Use one of the supported commit types or their aliases
+2. Follow the format: `type(scope): description` or `type: description`
+3. Keep the commit message clear and concise
+4. Use meaningful scopes that describe the area of the codebase being changed
+
 ## Installation
 
 1. Install a userscript manager:
