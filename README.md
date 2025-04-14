@@ -2,6 +2,7 @@
 
 A userscript that enhances GitHub commits by adding beautiful labels for conventional commit types. It automatically detects commit types (like feat, fix, docs) and adds visually appealing labels to make your commit history more readable.
 
+[![Install GitHub Commit Labels](https://img.shields.io/badge/Install-GitHub%20Commit%20Labels-brightgreen?style=for-the-badge)](https://greasyfork.org/en/scripts/526153-github-commit-labels)
 
 ## Features
 
