@@ -15,6 +15,7 @@ A userscript that enhances GitHub commits by adding beautiful labels for convent
 - ⚙️ Fully customizable through a user-friendly configuration panel
 - 🔄 Supports multiple aliases for each commit type
 - 🎯 Works on commit history and single commit pages
+- ⚠️ Special highlighting for BREAKING CHANGES (using `type!:` or `type(scope)!:`)
 
 
 ![preview1](https://raw.githubusercontent.com/nazdridoy/github-commit-labels/main/previews/preview1.png)
@@ -67,6 +68,8 @@ docs: update API documentation
 # With scope
 feat(auth): implement OAuth2 login
 fix(api): handle rate limiting errors
+feat!(auth): implement breaking change in auth
+refactor!(parser): rewrite parser logic (breaking change)
 docs(readme): add installation guide
 style(button): improve hover effects
 refactor(service): clean up user service code
@@ -77,8 +80,9 @@ test(auth): add unit tests for auth service
 The script will automatically detect the commit type from the first word of your commit message and add the appropriate label. Make sure to:
 1. Use one of the supported commit types or their aliases
 2. Follow the format: `type(scope): description` or `type: description`
-3. Keep the commit message clear and concise
-4. Use meaningful scopes that describe the area of the codebase being changed
+3. Indicate **breaking changes** by adding `!` after the type or scope: `type!:` or `type(scope)!:`.
+4. Keep the commit message clear and concise
+5. Use meaningful scopes that describe the area of the codebase being changed
 
 ## Installation
 

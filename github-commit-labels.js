@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.5.0
+// @version      1.5.1
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -1313,14 +1313,31 @@ SOFTWARE.
                         continue;
                     }
 
-                    const match = text.match(/^(\w+)(?:\(([\w-]+)\))?:\s*(.*)/);
-                    debugLog('Commit message match result:', match);
+                    // Step 1: Basic parse - Capture type, middle part, and message
+                    const basicMatch = text.match(/^(\w+)(.*?):\s*(.*)$/);
+                    debugLog('Basic commit message match result:', basicMatch);
 
-                    if (match) {
-                        const type = match[1].toLowerCase();
-                        const scope = match[2] || '';
-                        const restOfMessage = match[3];
-                        debugLog(`Extracted: type=${type}, scope=${scope}, message=${restOfMessage}`);
+                    if (basicMatch) {
+                        const type = basicMatch[1].toLowerCase();
+                        const middlePart = basicMatch[2].trim();
+                        const restOfMessage = basicMatch[3];
+
+                        let scope = '';
+                        let isBreaking = false;
+                        let scopePart = middlePart; // Start with the full middle part
+
+                        // Step 2: Check for breaking change indicator anywhere in the middle part
+                        if (middlePart.includes('!')) {
+                            isBreaking = true;
+                            scopePart = middlePart.replace('!', '').trim(); // Remove ! for scope extraction
+                        }
+                        
+                        // Step 3: Check if the remaining part is a scope
+                        if (scopePart.startsWith('(') && scopePart.endsWith(')')) {
+                            scope = scopePart.slice(1, -1); // Extract scope content
+                        }
+
+                        debugLog(`Extracted: type=${type}, scope=${scope}, isBreaking=${isBreaking}, message=${restOfMessage}`);
 
                         if (USER_CONFIG.commitTypes[type]) {
                             debugLog(`Found matching commit type: ${type}`);
@@ -1331,6 +1348,9 @@ SOFTWARE.
                                 label.className = 'commit-label';
                                 label.dataset.commitType = type;
                                 label.dataset.commitScope = scope;
+                                if (isBreaking) {
+                                    label.dataset.isBreaking = 'true';
+                                }
                                 
                                 const color = COLORS[USER_CONFIG.commitTypes[type].color];
                                 
@@ -1341,6 +1361,11 @@ SOFTWARE.
                                     color: color.text,
                                     display: USER_CONFIG.labelsVisible ? 'inline-flex' : 'none'
                                 };
+
+                                if (isBreaking) {
+                                    styles.border = '2px solid #d73a49';
+                                    styles.fontWeight = 'bold';
+                                }
 
                                 label.style.cssText = Object.entries(styles)
                                     .map(([key, value]) => `${key.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${value}`)
@@ -1444,6 +1469,9 @@ SOFTWARE.
 
                                 const labelText = document.createElement('span');
                                 labelText.textContent = USER_CONFIG.commitTypes[type].label;
+                                if (isBreaking) {
+                                    labelText.textContent += ' ⚠️';
+                                }
 
                                 label.appendChild(emoji);
                                 label.appendChild(labelText);
