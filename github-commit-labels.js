@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.5.1
+// @version      1.6.0
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -296,14 +296,24 @@ SOFTWARE.
         // Check if toggle already exists
         if (document.getElementById('commit-labels-toggle')) return;
         
+        // Create a container for both buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'commit-labels-buttons';
+        buttonContainer.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 9999;
+        `;
+        
+        // Label toggle button
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'commit-labels-toggle';
         toggleBtn.textContent = USER_CONFIG.labelsVisible ? '🏷️' : '🏷️';
         toggleBtn.title = USER_CONFIG.labelsVisible ? 'Hide commit labels' : 'Show commit labels';
         toggleBtn.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
             width: 32px;
             height: 32px;
             border-radius: 6px;
@@ -312,7 +322,6 @@ SOFTWARE.
             border: 1px solid rgba(205, 217, 229, 0.1);
             font-size: 14px;
             cursor: pointer;
-            z-index: 9999;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -322,7 +331,30 @@ SOFTWARE.
             backdrop-filter: blur(4px);
         `;
         
-        // Add hover effect
+        // Config toggle button
+        const configBtn = document.createElement('button');
+        configBtn.id = 'commit-labels-config-toggle';
+        configBtn.textContent = '⚙️';
+        configBtn.title = 'Open configuration';
+        configBtn.style.cssText = `
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: rgba(31, 35, 40, 0.6);
+            color: #adbac7;
+            border: 1px solid rgba(205, 217, 229, 0.1);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            opacity: 0.5;
+            transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
+            backdrop-filter: blur(4px);
+        `;
+        
+        // Add hover effect for label toggle
         toggleBtn.addEventListener('mouseenter', () => {
             toggleBtn.style.opacity = '1';
             toggleBtn.style.background = currentTheme === 'light' ? 
@@ -334,6 +366,20 @@ SOFTWARE.
             toggleBtn.style.opacity = '0.5';
             toggleBtn.style.background = 'rgba(31, 35, 40, 0.6)';
             toggleBtn.style.color = '#adbac7';
+        });
+        
+        // Add hover effect for config button
+        configBtn.addEventListener('mouseenter', () => {
+            configBtn.style.opacity = '1';
+            configBtn.style.background = currentTheme === 'light' ? 
+                'rgba(246, 248, 250, 0.8)' : 'rgba(22, 27, 34, 0.8)';
+            configBtn.style.color = currentTheme === 'light' ? '#24292f' : '#e6edf3';
+        });
+        
+        configBtn.addEventListener('mouseleave', () => {
+            configBtn.style.opacity = '0.5';
+            configBtn.style.background = 'rgba(31, 35, 40, 0.6)';
+            configBtn.style.color = '#adbac7';
         });
         
         // Toggle labels on click
@@ -352,7 +398,15 @@ SOFTWARE.
             });
         });
         
-        document.body.appendChild(toggleBtn);
+        // Open config window on click
+        configBtn.addEventListener('click', () => {
+            createConfigWindow();
+        });
+        
+        // Add buttons to container
+        buttonContainer.appendChild(toggleBtn);
+        buttonContainer.appendChild(configBtn);
+        document.body.appendChild(buttonContainer);
         
         // Set initial state
         toggleBtn.style.textDecoration = USER_CONFIG.labelsVisible ? 'none' : 'line-through';
