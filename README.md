@@ -17,10 +17,16 @@ A userscript that enhances GitHub commits by adding beautiful labels for convent
 - 🎯 Works on commit history and single commit pages
 - ⚠️ Special highlighting for BREAKING CHANGES (using `type!:` or `type(scope)!:`)
 
+## Try it on these repositories
+
+After installing the script, check it out on these repositories with conventional commits:
+
+- [Refined GitHub Sandbox - https://github.com/refined-github/sandbox/commits/conventional-commits/](https://github.com/refined-github/sandbox/commits/conventional-commits/)
+- [NGPT - https://github.com/nazdridoy/ngpt/commits/main/](https://github.com/nazdridoy/ngpt/commits/main/)
+- [Kokoro TTS - https://github.com/nazdridoy/kokoro-tts/commits/main](https://github.com/nazdridoy/kokoro-tts/commits/main)
+- [Standard Version - https://github.com/conventional-changelog/standard-version/commits](https://github.com/conventional-changelog/standard-version/commits)
 
 ![preview1](https://raw.githubusercontent.com/nazdridoy/github-commit-labels/main/previews/preview1.png)
-
-
 
 ## Supported Commit Types
 
