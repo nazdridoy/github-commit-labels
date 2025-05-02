@@ -124,7 +124,7 @@ The script will automatically detect the commit type from the first word of your
 
 ### Setup nGPT
 
-1. Install nGPT following the [installation instructions](https://nazdridoy.github.io/ngpt/installation-guide/).
+1. Install nGPT following the [installation instructions](https://nazdridoy.github.io/ngpt/installation/).
 2. Configure nGPT with your preferred LLM provider (OpenAI, Ollama, Groq, Claude, Gemini, etc.).
 
 ### Generate Conventional Commit Messages
