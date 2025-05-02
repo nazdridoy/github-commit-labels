@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitHub Commit Labels
 // @namespace    https://github.com/nazdridoy
-// @version      1.6.1
+// @version      1.6.2
 // @description  Enhances GitHub commits with beautiful labels for conventional commit types (feat, fix, docs, etc.)
 // @author       nazdridoy
 // @license      MIT
@@ -523,6 +523,36 @@ SOFTWARE.
         titleContainer.appendChild(title);
         titleContainer.appendChild(repoContainer);
         configWindow.appendChild(titleContainer);
+
+        // Add tip about nGPT for commit generation
+        const ngptTip = document.createElement('div');
+        ngptTip.style.cssText = `
+            margin: 0 0 20px 0;
+            padding: 10px;
+            background: ${isDark ? 'rgba(56, 139, 253, 0.1)' : 'rgba(56, 139, 253, 0.1)'};
+            border-left: 4px solid ${isDark ? '#58a6ff' : '#0969da'};
+            border-radius: 4px;
+            font-size: 13px;
+            color: ${configStyles.window.color};
+        `;
+        
+        ngptTip.innerHTML = `
+            <strong>Pro Tip:</strong> Generate perfect conventional commit messages automatically with 
+            <a href="https://github.com/nazdridoy/ngpt" target="_blank" style="color: ${configStyles.text.link}; text-decoration: none;">nGPT</a>. 
+            Use the <code style="background: ${isDark ? '#161b22' : '#f6f8fa'}; padding: 2px 4px; border-radius: 3px;">ngpt -g</code> 
+            command to analyze your changes and create formatted commit messages that work beautifully with this userscript.
+        `;
+        
+        // Add hover effect for the link
+        ngptTip.querySelector('a').addEventListener('mouseenter', (e) => {
+            e.target.style.textDecoration = 'underline';
+        });
+        
+        ngptTip.querySelector('a').addEventListener('mouseleave', (e) => {
+            e.target.style.textDecoration = 'none';
+        });
+        
+        configWindow.appendChild(ngptTip);
 
         // Remove Prefix Option
         const prefixDiv = document.createElement('div');
